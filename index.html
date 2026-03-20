@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>backstax — Logo</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #080808;
+    --surface: #111111;
+    --border: #1e1e1e;
+    --white: #f5f5f0;
+    --dim: #555;
+    --accent: #c8ff57;
+    --accent2: #ff4d4d;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'Poppins', sans-serif;
+    color: var(--white);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 80px 40px;
+  }
+
+  .section-label {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 60px;
+    text-align: center;
+  }
+
+  /* ─── LOGO 01 — WORDMARK WEIGHT CONTRAST ─── */
+  .logo-01 {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    margin-bottom: 120px;
+  }
+  .logo-01 .wordmark {
+    font-size: 72px;
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .logo-01 .back {
+    font-weight: 200;
+    color: var(--white);
+  }
+  .logo-01 .stax {
+    font-weight: 800;
+    color: var(--white);
+  }
+  .logo-01 .dot-com {
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    color: var(--dim);
+    margin-top: 10px;
+    padding-left: 3px;
+    text-transform: lowercase;
+  }
+  .logo-01 .bar {
+    width: 100%;
+    height: 2px;
+    background: var(--accent);
+    margin-top: 14px;
+  }
+
+  /* ─── LOGO 02 — STACKED / GRID MARK ─── */
+  .logo-02 {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    margin-bottom: 120px;
+  }
+  .logo-02 .mark {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .mark-row {
+    display: flex;
+    gap: 5px;
+  }
+  .mark-cell {
+    width: 11px;
+    height: 11px;
+    background: var(--white);
+  }
+  .mark-cell.dim { background: #333; }
+  .mark-cell.acc { background: var(--accent); }
+
+  .logo-02 .text-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+  }
+  .logo-02 .name {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .logo-02 .sub {
+    font-size: 10px;
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+
+  /* ─── LOGO 03 — SLASH ACCENT ─── */
+  .logo-03 {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 120px;
+    position: relative;
+    padding-left: 24px;
+  }
+  .logo-03::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  .logo-03 .name {
+    font-size: 52px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--white);
+  }
+  .logo-03 .name span {
+    color: var(--accent);
+  }
+  .logo-03 .tagline {
+    font-size: 10px;
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  /* ─── LOGO 04 — DARK/LIGHT ─── */
+  .logo-04-wrapper {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 120px;
+    align-items: stretch;
+  }
+  .logo-04 {
+    width: 280px;
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .logo-04.dark-version {
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  .logo-04.light-version {
+    background: var(--white);
+  }
+  .logo-04 .name {
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+  }
+  .logo-04.dark-version .name { color: var(--white); }
+  .logo-04.light-version .name { color: var(--bg); }
+  .logo-04 .name .dot { color: var(--accent); }
+  .logo-04.light-version .name .dot { color: var(--bg); }
+
+  /* ─── LOGO 05 — ULTRA MINIMAL MONO ─── */
+  .logo-05 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 80px;
+  }
+  .logo-05 .outer-ring {
+    border: 1px solid #2a2a2a;
+    padding: 32px 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+  }
+  .logo-05 .outer-ring::before,
+  .logo-05 .outer-ring::after {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+  }
+  .logo-05 .outer-ring::before { top: -3px; left: -3px; }
+  .logo-05 .outer-ring::after { bottom: -3px; right: -3px; }
+  .logo-05 .name {
+    font-size: 44px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--white);
+    line-height: 1;
+  }
+  .logo-05 .domain-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+  .logo-05 .rule {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .logo-05 .domain-text {
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+
+  /* ─── VERSION LABELS ─── */
+  .ver {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #333;
+    margin-bottom: 32px;
+    text-align: center;
+  }
+
+  .divider {
+    width: 1px;
+    height: 60px;
+    background: var(--border);
+    margin: 0 auto 60px;
+  }
+
+  /* fade in */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .logo-01 { animation: fadeUp 0.7s ease both; }
+  .logo-02 { animation: fadeUp 0.7s 0.1s ease both; }
+  .logo-03 { animation: fadeUp 0.7s 0.2s ease both; }
+  .logo-04-wrapper { animation: fadeUp 0.7s 0.3s ease both; }
+  .logo-05 { animation: fadeUp 0.7s 0.4s ease both; }
+</style>
+</head>
+<body>
+
+  <p class="section-label">backstax.com — Logo Explorations</p>
+
+  <!-- V1 -->
+  <p class="ver">01 — Weight Contrast Wordmark</p>
+  <div class="logo-01">
+    <div class="wordmark">
+      <span class="back">back</span><span class="stax">stax</span>
+    </div>
+    <div class="bar"></div>
+    <div class="dot-com">.com</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- V2 -->
+  <p class="ver">02 — Grid Mark + Wordmark</p>
+  <div class="logo-02">
+    <div class="mark">
+      <div class="mark-row">
+        <div class="mark-cell"></div>
+        <div class="mark-cell"></div>
+        <div class="mark-cell acc"></div>
+      </div>
+      <div class="mark-row">
+        <div class="mark-cell"></div>
+        <div class="mark-cell acc"></div>
+        <div class="mark-cell dim"></div>
+      </div>
+      <div class="mark-row">
+        <div class="mark-cell acc"></div>
+        <div class="mark-cell dim"></div>
+        <div class="mark-cell dim"></div>
+      </div>
+    </div>
+    <div class="text-wrap">
+      <div class="name">backstax</div>
+      <div class="sub">.com</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- V3 -->
+  <p class="ver">03 — Vertical Rule + Accent Letter</p>
+  <div class="logo-03">
+    <div class="name">back<span>s</span>tax</div>
+    <div class="tagline">store · stack · sync</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- V4 -->
+  <p class="ver">04 — Dark / Light Lockup</p>
+  <div class="logo-04-wrapper">
+    <div class="logo-04 dark-version">
+      <div class="name">back<span class="dot">.</span>stax</div>
+    </div>
+    <div class="logo-04 light-version">
+      <div class="name">back<span class="dot">.</span>stax</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- V5 -->
+  <p class="ver">05 — Corner-Mark Enclosure</p>
+  <div class="logo-05">
+    <div class="outer-ring">
+      <div class="name">BACKSTAX</div>
+      <div class="domain-line">
+        <div class="rule"></div>
+        <div class="domain-text">.com</div>
+        <div class="rule"></div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
