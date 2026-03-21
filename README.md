@@ -36,7 +36,7 @@ One file. Zero build steps. Zero dependencies to install. Zero API keys.
 
 ```bash
 # Just open it
-open backstax.html
+open index.html
 
 # Or serve locally if you prefer
 npx serve .
