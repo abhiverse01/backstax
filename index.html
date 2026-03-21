@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BACKSTAX · WORLD MONITOR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════
+   BACKSTAX — RESET & VARIABLES
+═══════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #040810;
+  --bg2:         #070d1a;
+  --bg3:         #0b1325;
+  --panel:       rgba(5, 11, 22, 0.96);
+  --border:      rgba(0, 200, 255, 0.10);
+  --border-hi:   rgba(0, 200, 255, 0.30);
+  --cyan:        #00d4ff;
+  --cyan2:       rgba(0, 212, 255, 0.35);
+  --cyan3:       rgba(0, 212, 255, 0.08);
+  --amber:       #f5a623;
+  --red:         #ff2d55;
+  --green:       #00ff88;
+  --purple:      #bd93f9;
+  --blue:        #60a5fa;
+  --text:        #c8deff;
+  --text2:       rgba(200, 222, 255, 0.50);
+  --text3:       rgba(200, 222, 255, 0.22);
+  --text4:       rgba(200, 222, 255, 0.10);
+  --fo:          'Orbitron', monospace;
+  --fd:          'Rajdhani', sans-serif;
+  --fm:          'Share Tech Mono', monospace;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--fm); overflow: hidden; }
+
+/* ═══════════════════════════════════════════════════
+   APP GRID
+═══════════════════════════════════════════════════ */
+.app {
+  display: grid;
+  grid-template-rows: 50px 1fr 34px;
+  grid-template-columns: 272px 1fr 290px;
+  grid-template-areas:
+    "hdr hdr hdr"
+    "lft map rgt"
+    "tkr tkr tkr";
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ═══════════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════════ */
+header {
+  grid-area: hdr;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  background: rgba(4,8,16,0.99);
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  z-index: 1000;
+  position: relative;
+}
+
+/* subtle grid noise on header */
+header::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+}
+
+.logo {
+  font-family: var(--fo);
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: var(--cyan);
+  text-shadow: 0 0 24px rgba(0,212,255,0.55);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.logo-hex {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.h-div { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+
+.pills {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border: 1px solid var(--border);
+  font-size: 9px;
+  letter-spacing: 0.10em;
+  color: var(--text3);
+  background: var(--cyan3);
+  white-space: nowrap;
+}
+.pill .dot { width:5px; height:5px; border-radius:50%; animation:blink 2s infinite; }
+.pill.live  { color:var(--text2); border-color:rgba(0,255,136,0.20); }
+.pill.live  .dot { background:var(--green); box-shadow:0 0 5px var(--green); }
+.pill.warn  { color:var(--text2); border-color:rgba(245,166,35,0.25); }
+.pill.warn  .dot { background:var(--amber); box-shadow:0 0 5px var(--amber); }
+.pill.alert { color:var(--text2); border-color:rgba(255,45,85,0.25); }
+.pill.alert .dot { background:var(--red);  box-shadow:0 0 5px var(--red); }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+.clock {
+  margin-left: auto;
+  text-align: right;
+  position: relative;
+  z-index: 1;
+}
+.clock-time {
+  font-family: var(--fo);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--cyan);
+  opacity: 0.75;
+}
+.clock-date {
+  font-size: 8px;
+  letter-spacing: 0.15em;
+  color: var(--text3);
+  margin-top: 1px;
+}
+
+/* ═══════════════════════════════════════════════════
+   PANELS (shared)
+═══════════════════════════════════════════════════ */
+.left-panel, .right-panel {
+  background: var(--panel);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.left-panel  { grid-area: lft; border-right: 1px solid var(--border); }
+.right-panel { grid-area: rgt; border-left:  1px solid var(--border); }
+
+.section {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sh {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 9px;
+}
+.sh-title {
+  font-family: var(--fo);
+  font-size: 7.5px;
+  letter-spacing: 0.28em;
+  color: var(--cyan);
+  white-space: nowrap;
+}
+.sh-badge {
+  font-size: 7px;
+  padding: 1px 5px;
+  border: 1px solid var(--cyan2);
+  color: var(--cyan2);
+  letter-spacing: 0.12em;
+}
+.sh-line  { flex:1; height:1px; background:linear-gradient(to right,var(--border),transparent); }
+.sh-btn {
+  font-family: var(--fm);
+  font-size: 9px;
+  color: var(--text3);
+  background: none;
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.sh-btn:hover { color:var(--cyan); border-color:var(--cyan2); }
+
+/* ═══════════════════════════════════════════════════
+   CRYPTO / MARKET ROWS
+═══════════════════════════════════════════════════ */
+.cr-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--text4);
+}
+.cr-sym {
+  font-family: var(--fo);
+  font-size: 9px;
+  font-weight: 700;
+  width: 30px;
+  color: var(--text2);
+}
+.cr-price {
+  font-family: var(--fd);
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+}
+.cr-chg {
+  font-family: var(--fd);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 5px;
+}
+.cr-chg.up   { color:var(--green); }
+.cr-chg.down { color:var(--red); }
+
+/* sparkline canvas */
+.cr-spark { height:20px; margin-top:4px; width:100%; }
+
+/* ═══════════════════════════════════════════════════
+   STAT GRID
+═══════════════════════════════════════════════════ */
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.stat-cell {
+  padding: 7px 8px;
+  background: var(--cyan3);
+  border: 1px solid var(--border);
+}
+.stat-val {
+  display: block;
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.stat-lbl {
+  font-size: 6.5px;
+  letter-spacing: 0.14em;
+  color: var(--text3);
+  margin-top: 2px;
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════════
+   EVENT & QUAKE LIST
+═══════════════════════════════════════════════════ */
+.ev-item {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--text4);
+  cursor: pointer;
+  transition: padding .15s;
+}
+.ev-item:hover { padding-left:5px; }
+.ev-head { display:flex; align-items:center; gap:6px; margin-bottom:2px; }
+.ev-dot  { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.ev-name { font-size:9.5px; line-height:1.35; flex:1; color:var(--text); }
+.ev-mag  { font-family:var(--fd); font-size:12px; font-weight:700; margin-left:auto; }
+.ev-meta { font-size:7.5px; color:var(--text3); padding-left:12px; letter-spacing:0.04em; }
+
+/* ═══════════════════════════════════════════════════
+   NEWS FEED
+═══════════════════════════════════════════════════ */
+.news-item {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--text4);
+  cursor: pointer;
+}
+.news-item:hover .news-title { color:var(--cyan); }
+.news-src   { font-size:6.5px; letter-spacing:0.18em; color:var(--cyan2); text-transform:uppercase; margin-bottom:2px; }
+.news-title { font-size:9.5px; line-height:1.4; color:var(--text); transition:color .2s; }
+.news-time  { font-size:7px; color:var(--text3); margin-top:2px; }
+
+/* ═══════════════════════════════════════════════════
+   WEATHER CITIES
+═══════════════════════════════════════════════════ */
+.wx-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--text4);
+}
+.wx-ic   { font-size: 13px; }
+.wx-city { font-size: 9px; color:var(--text2); flex:1; letter-spacing:0.04em; }
+.wx-temp { font-family:var(--fd); font-size:13px; font-weight:600; color:var(--text); }
+.wx-aqi  { font-size:7.5px; padding:1px 4px; border-radius:1px; }
+
+/* ═══════════════════════════════════════════════════
+   ISS DISPLAY
+═══════════════════════════════════════════════════ */
+.iss-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.iss-ico { font-size: 22px; animation: sway 4s ease-in-out infinite; }
+@keyframes sway { 0%,100%{transform:rotate(-6deg)} 50%{transform:rotate(6deg)} }
+.iss-coords { font-family:var(--fd); font-size:13px; font-weight:600; color:var(--green); }
+.iss-sub    { font-size:7.5px; color:var(--text3); margin-top:2px; }
+
+/* ═══════════════════════════════════════════════════
+   PULSE METERS
+═══════════════════════════════════════════════════ */
+.meter-wrap { padding: 5px 0; }
+.meter-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  margin-bottom: 4px;
+}
+.meter-lbl { color:var(--text3); letter-spacing:0.10em; }
+.meter-val { font-weight:600; }
+.meter-segs { display:flex; gap:2px; }
+.seg { height:3px; flex:1; background:var(--text4); border-radius:1px; transition:background .5s; }
+.seg.low  { background:var(--green); box-shadow:0 0 3px var(--green); }
+.seg.mid  { background:var(--amber); box-shadow:0 0 3px var(--amber); }
+.seg.hi   { background:var(--red);   box-shadow:0 0 3px var(--red); }
+
+/* ═══════════════════════════════════════════════════
+   MAP
+═══════════════════════════════════════════════════ */
+#map-wrap {
+  grid-area: map;
+  position: relative;
+  overflow: hidden;
+}
+#map { width:100%; height:100%; }
+
+/* Leaflet overrides */
+.leaflet-container { background: #040810 !important; }
+.leaflet-control-zoom {
+  border: 1px solid var(--border) !important;
+  background: rgba(4,8,16,0.92) !important;
+  border-radius: 0 !important;
+}
+.leaflet-control-zoom a {
+  background: transparent !important;
+  color: var(--text2) !important;
+  border-bottom: 1px solid var(--border) !important;
+  font-family: var(--fm) !important;
+  font-size: 14px !important;
+  line-height: 26px !important;
+  width: 26px !important;
+  height: 26px !important;
+}
+.leaflet-control-zoom a:hover {
+  background: var(--cyan3) !important;
+  color: var(--cyan) !important;
+}
+.leaflet-control-attribution {
+  background: rgba(4,8,16,0.7) !important;
+  color: var(--text3) !important;
+  font-size: 7px !important;
+  border: none !important;
+}
+.leaflet-popup-content-wrapper {
+  background: rgba(5,11,22,0.98) !important;
+  border: 1px solid var(--border-hi) !important;
+  border-radius: 0 !important;
+  color: var(--text) !important;
+  font-family: var(--fm) !important;
+  box-shadow: 0 4px 30px rgba(0,0,0,.8), 0 0 20px rgba(0,212,255,0.08) !important;
+}
+.leaflet-popup-tip { background: var(--bg2) !important; }
+.leaflet-popup-content { font-size:10px !important; line-height:1.6 !important; margin: 10px 14px !important; }
+.pp-title { font-family:var(--fo); font-size:10px; color:var(--cyan); margin-bottom:5px; letter-spacing:.05em; }
+.pp-row   { color:var(--text2); }
+
+/* Map chrome */
+.mc { position:absolute; z-index:800; pointer-events:none; }
+.corner-tl { top:8px; left:8px; width:16px; height:16px; border-top:1.5px solid var(--cyan); border-left:1.5px solid var(--cyan); opacity:.6; }
+.corner-tr { top:8px; right:8px; width:16px; height:16px; border-top:1.5px solid var(--cyan); border-right:1.5px solid var(--cyan); opacity:.6; }
+.corner-bl { bottom:8px; left:8px; width:16px; height:16px; border-bottom:1.5px solid var(--cyan); border-left:1.5px solid var(--cyan); opacity:.6; }
+.corner-br { bottom:8px; right:8px; width:16px; height:16px; border-bottom:1.5px solid var(--cyan); border-right:1.5px solid var(--cyan); opacity:.6; }
+
+.scan {
+  position: absolute;
+  left:0; right:0;
+  height: 1.5px;
+  background: linear-gradient(to right, transparent, rgba(0,212,255,0.12), transparent);
+  z-index: 799;
+  pointer-events: none;
+  animation: scan 10s linear infinite;
+}
+@keyframes scan { 0%{top:0;opacity:0} 3%{opacity:1} 97%{opacity:1} 100%{top:100%;opacity:0} }
+
+/* Map buttons overlay */
+.map-btns {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 801;
+  display: flex;
+  gap: 4px;
+  pointer-events: all;
+}
+.map-btn {
+  padding: 3px 10px;
+  font-family: var(--fm);
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  border: 1px solid var(--border);
+  background: rgba(4,8,16,0.88);
+  color: var(--text3);
+  cursor: pointer;
+  transition: all .18s;
+}
+.map-btn:hover, .map-btn.on {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: var(--cyan3);
+  box-shadow: 0 0 8px rgba(0,212,255,0.15);
+}
+
+/* Bottom stats bar on map */
+.map-stats {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 800;
+  display: flex;
+  gap: 1px;
+  pointer-events: none;
+}
+.ms {
+  padding: 4px 14px;
+  background: rgba(4,8,16,0.92);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.ms-val {
+  display: block;
+  font-family: var(--fo);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cyan);
+  line-height: 1.2;
+}
+.ms-lbl {
+  font-size: 6.5px;
+  letter-spacing: 0.16em;
+  color: var(--text3);
+}
+
+/* Map legend */
+.map-legend {
+  position: absolute;
+  bottom: 52px;
+  right: 10px;
+  z-index: 800;
+  background: rgba(4,8,16,0.92);
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  pointer-events: none;
+}
+.ml-title { font-family:var(--fo); font-size:6.5px; letter-spacing:0.22em; color:var(--text3); margin-bottom:6px; }
+.ml-row   { display:flex; align-items:center; gap:6px; font-size:7.5px; color:var(--text2); margin-bottom:3px; }
+.ml-dot   { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+
+/* Marker animations */
+@keyframes q-pulse {
+  0%  { box-shadow: 0 0 0 0 rgba(255,45,85,0.8); }
+  70% { box-shadow: 0 0 0 8px rgba(255,45,85,0); }
+  100%{ box-shadow: 0 0 0 0 rgba(255,45,85,0); }
+}
+@keyframes fire-flick { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
+@keyframes iss-blink { 0%,100%{opacity:1;box-shadow:0 0 10px var(--green)} 50%{opacity:.4;box-shadow:none} }
+
+/* ═══════════════════════════════════════════════════
+   NEWS TICKER
+═══════════════════════════════════════════════════ */
+.ticker {
+  grid-area: tkr;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: rgba(4,8,16,0.99);
+  border-top: 1px solid var(--border);
+  position: relative;
+}
+.ticker::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(4,8,16,1) 200px, transparent 280px, transparent calc(100% - 60px), rgba(4,8,16,1) 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+.ticker-label {
+  flex-shrink: 0;
+  padding: 0 14px;
+  font-family: var(--fo);
+  font-size: 7.5px;
+  letter-spacing: 0.25em;
+  color: var(--cyan);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  border-right: 1px solid var(--border);
+  background: var(--cyan3);
+  z-index: 3;
+  position: relative;
+}
+.ticker-track { flex:1; overflow:hidden; height:100%; position:relative; }
+.ticker-scroll {
+  display: flex;
+  white-space: nowrap;
+  animation: scroll 90s linear infinite;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+@keyframes scroll { 0%{left:0} 100%{left:-50%} }
+.ticker-item {
+  padding: 0 22px;
+  font-size: 9.5px;
+  color: var(--text2);
+  border-right: 1px solid var(--border);
+}
+.ticker-item::before { content:'◆ '; font-size:5px; color:var(--cyan); margin-right:6px; }
+
+/* ═══════════════════════════════════════════════════
+   LOADING SCREEN
+═══════════════════════════════════════════════════ */
+#loader {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  z-index: 9999;
+  transition: opacity .5s ease;
+}
+#loader.fade { opacity:0; pointer-events:none; }
+.ld-logo {
+  font-family: var(--fo);
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--cyan);
+  text-shadow: 0 0 50px rgba(0,212,255,0.7);
+  letter-spacing: 0.22em;
+  animation: logo-flicker 3s ease-in-out infinite;
+}
+@keyframes logo-flicker {
+  0%,100%{text-shadow:0 0 50px rgba(0,212,255,0.7)}
+  50%{text-shadow:0 0 80px rgba(0,212,255,0.95),0 0 20px rgba(0,212,255,0.5)}
+}
+.ld-sub {
+  font-size: 9px;
+  letter-spacing: 0.45em;
+  color: var(--text3);
+}
+.ld-bar-wrap { width:220px; height:1px; background:var(--text4); }
+.ld-bar {
+  height:100%;
+  background: linear-gradient(to right, var(--cyan2), var(--cyan));
+  width: 0;
+  animation: lbar 2.5s ease forwards;
+  box-shadow: 0 0 10px var(--cyan);
+}
+@keyframes lbar { 0%{width:0} 100%{width:100%} }
+.ld-status {
+  font-size: 8px;
+  letter-spacing: 0.20em;
+  color: var(--text3);
+  animation: blink 1.2s infinite;
+  min-height: 12px;
+}
+
+/* ═══════════════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 2px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); }
+
+/* ═══════════════════════════════════════════════════
+   UTILITY
+═══════════════════════════════════════════════════ */
+.dim { color: var(--text3); }
+.empty { font-size:8.5px; color:var(--text3); padding:8px 0; }
+
+/* Mini canvas sparkline */
+canvas.spark { display:block; width:100%; height:20px; }
+
+</style>
+</head>
+<body>
+
+<!-- ═══ LOADING ═══ -->
+<div id="loader">
+  <div class="ld-logo">BACKSTAX</div>
+  <div class="ld-bar-wrap"><div class="ld-bar"></div></div>
+  <div class="ld-sub">WORLD MONITOR</div>
+  <div class="ld-status" id="ldStatus">INITIALIZING SYSTEMS...</div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div class="app" id="appRoot">
+
+  <!-- ════════ HEADER ════════ -->
+  <header>
+    <div class="logo">
+      <svg class="logo-hex" viewBox="0 0 26 26" fill="none">
+        <polygon points="13,1 24,7 24,19 13,25 2,19 2,7"
+          stroke="#00d4ff" stroke-width="1.2" fill="rgba(0,212,255,0.05)"/>
+        <polygon points="13,6 20,10 20,17 13,21 6,17 6,10"
+          stroke="#00d4ff" stroke-width="0.8" fill="rgba(0,212,255,0.08)" opacity=".55"/>
+        <circle cx="13" cy="13" r="2" fill="#00d4ff" opacity=".9"/>
+      </svg>
+      BACKSTAX
+    </div>
+    <div class="h-div"></div>
+    <div class="pills">
+      <div class="pill live"><span class="dot"></span>LIVE FEEDS</div>
+      <div class="pill live" id="pQuake"><span class="dot"></span>SEISMIC: <span id="pQCount">--</span></div>
+      <div class="pill warn"  id="pEvent"><span class="dot"></span>EVENTS: <span id="pECount">--</span></div>
+      <div class="pill live"  id="pISS"><span class="dot"></span>ISS TRACK</div>
+      <div class="pill warn"  id="pNews"><span class="dot"></span>NEWS INTEL</div>
+    </div>
+    <div class="clock">
+      <div class="clock-time" id="clockTime">--:--:-- UTC</div>
+      <div class="clock-date" id="clockDate">--- --, ----</div>
+    </div>
+  </header>
+
+  <!-- ════════ LEFT PANEL ════════ -->
+  <aside class="left-panel">
+
+    <!-- CRYPTO MARKETS -->
+    <div class="section">
+      <div class="sh">
+        <div class="sh-title">MARKETS</div>
+        <div class="sh-badge">LIVE</div>
+        <div class="sh-line"></div>
+        <button class="sh-btn" id="cryptoRefreshBtn" onclick="fetchCrypto()">↻</button>
+      </div>
+      <div id="cryptoPanel">
+        <div class="cr-row"><div class="cr-sym" style="color:var(--amber)">BTC</div><div class="cr-price" id="btcP" style="color:var(--amber)">$--,---</div><div class="cr-chg" id="btcC">--%</div></div>
+        <div class="cr-row"><div class="cr-sym" style="color:var(--purple)">ETH</div><div class="cr-price" id="ethP" style="color:var(--purple)">$-,---</div><div class="cr-chg" id="ethC">--%</div></div>
+        <div class="cr-row"><div class="cr-sym" style="color:var(--green)">SOL</div><div class="cr-price" id="solP" style="color:var(--green)">$---</div><div class="cr-chg" id="solC">--%</div></div>
+        <div class="cr-row"><div class="cr-sym" style="color:var(--blue)">BNB</div><div class="cr-price" id="bnbP" style="color:var(--blue)">$---</div><div class="cr-chg" id="bnbC">--%</div></div>
+        <div class="cr-row"><div class="cr-sym" style="color:var(--cyan)">XRP</div><div class="cr-price" id="xrpP" style="color:var(--cyan)">$-.-</div><div class="cr-chg" id="xrpC">--%</div></div>
+      </div>
+    </div>
+
+    <!-- GLOBAL HEALTH -->
+    <div class="section">
+      <div class="sh">
+        <div class="sh-title">GLOBAL HEALTH</div>
+        <div class="sh-line"></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-cell"><span class="stat-val" id="hCases">--</span><span class="stat-lbl">TOTAL CASES</span></div>
+        <div class="stat-cell"><span class="stat-val" id="hDeaths" style="color:var(--red)">--</span><span class="stat-lbl">DEATHS</span></div>
+        <div class="stat-cell"><span class="stat-val" id="hRecov" style="color:var(--green)">--</span><span class="stat-lbl">RECOVERED</span></div>
+        <div class="stat-cell"><span class="stat-val" id="hActive" style="color:var(--amber)">--</span><span class="stat-lbl">ACTIVE</span></div>
+      </div>
+    </div>
+
+    <!-- SPACE / ISS -->
+    <div class="section">
+      <div class="sh">
+        <div class="sh-title">ISS TRACKER</div>
+        <div class="sh-badge">REAL-TIME</div>
+        <div class="sh-line"></div>
+      </div>
+      <div class="iss-wrap">
+        <div class="iss-ico">🛸</div>
+        <div>
+          <div style="font-size:6.5px;letter-spacing:.18em;color:var(--text3);margin-bottom:2px">COORDINATES</div>
+          <div class="iss-coords" id="issCoords">--°N --°E</div>
+          <div class="iss-sub" id="issSub">ALT: -- km · VEL: --,--- km/h</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WEATHER -->
+    <div class="section">
+      <div class="sh">
+        <div class="sh-title">CITY TEMPS</div>
+        <div class="sh-line"></div>
+      </div>
+      <div id="wxPanel"><div class="empty">Loading weather...</div></div>
+    </div>
+
+    <!-- SEISMIC LIST -->
+    <div class="section">
+      <div class="sh">
+        <div class="sh-title">SEISMIC ALERTS</div>
+        <div class="sh-badge">USGS</div>
+        <div class="sh-line"></div>
+      </div>
+      <div id="quakeList"><div class="empty">Loading seismic data...</div></div>
+    </div>
+
+  </aside>
+
+  <!-- ════════ MAP ════════ -->
+  <main id="map-wrap">
+    <div class="mc corner-tl"></div>
+    <div class="mc corner-tr"></div>
+    <div class="mc corner-bl"></div>
+    <div class="mc corner-br"></div>
+    <div class="scan"></div>
+
+    <div class="map-btns">
+      <button class="map-btn on" id="btnQ" onclick="toggleLayer('q',this)">⚡ SEISMIC</button>
+      <button class="map-btn on" id="btnE" onclick="toggleLayer('e',this)">🌋 EVENTS</button>
+      <button class="map-btn on" id="btnI" onclick="toggleLayer('i',this)">🛸 ISS</button>
+      <button class="map-btn on" id="btnN" onclick="toggleLayer('n',this)">📡 NEWS</button>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="map-legend">
+      <div class="ml-title">LAYER LEGEND</div>
+      <div class="ml-row"><div class="ml-dot" style="background:var(--red)"></div>Earthquake (M4.5+)</div>
+      <div class="ml-row"><div class="ml-dot" style="background:var(--amber)"></div>Wildfire / Natural</div>
+      <div class="ml-row"><div class="ml-dot" style="background:var(--blue)"></div>Storm / Flood</div>
+      <div class="ml-row"><div class="ml-dot" style="background:var(--green)"></div>ISS Live Position</div>
+      <div class="ml-row"><div class="ml-dot" style="background:var(--cyan)"></div>News Event</div>
+    </div>
+
+    <div class="map-stats">
+      <div class="ms"><span class="ms-val" id="msQ">--</span><span class="ms-lbl">SEISMIC</span></div>
+      <div class="ms"><span class="ms-val" id="msE">--</span><span class="ms-lbl">EVENTS</span></div>
+      <div class="ms"><span class="ms-val" id="msPop">8.1B</span><span class="ms-lbl">POPULATION</span></div>
+      <div class="ms"><span class="ms-val" id="msN">--</span><span class="ms-lbl">NEWS ITEMS</span></div>
+    </div>
+  </main>
+
+  <!-- ════════ RIGHT PANEL ════════ -->
+  <aside class="right-panel">
+
+    <!-- NEWS INTEL -->
+    <div class="section">
+      <div class="sh">
+        <div class="sh-title">WORLD INTEL</div>
+        <div class="sh-badge">RSS</div>
+        <div class="sh-line"></div>
+        <button class="sh-btn" onclick="fetchNews()">↻</button>
+      </div>
+      <div id="newsFeed"><div class="empty">Loading news feeds...</div></div>
+    </div>
+
+    <!-- EARTH EVENTS -->
+    <div class="section">
+      <div class="sh">
+        <div class="sh-title">EARTH EVENTS</div>
+        <div class="sh-badge">NASA</div>
+        <div class="sh-line"></div>
+      </div>
+      <div id="earthList"><div class="empty">Loading NASA EONET...</div></div>
+    </div>
+
+    <!-- PULSE METERS -->
+    <div class="section">
+      <div class="sh">
+        <div class="sh-title">GLOBAL PULSE</div>
+        <div class="sh-line"></div>
+      </div>
+
+      <div class="meter-wrap">
+        <div class="meter-head">
+          <span class="meter-lbl">SEISMIC ACTIVITY</span>
+          <span class="meter-val" id="seisLabel" style="color:var(--text3)">LOADING</span>
+        </div>
+        <div class="meter-segs" id="seisMeter"></div>
+      </div>
+
+      <div class="meter-wrap" style="margin-top:8px">
+        <div class="meter-head">
+          <span class="meter-lbl">NATURAL EVENTS</span>
+          <span class="meter-val" id="evLabel" style="color:var(--text3)">LOADING</span>
+        </div>
+        <div class="meter-segs" id="evMeter"></div>
+      </div>
+
+      <div class="meter-wrap" style="margin-top:8px">
+        <div class="meter-head">
+          <span class="meter-lbl">MARKET VOLATILITY</span>
+          <span class="meter-val" id="mktLabel" style="color:var(--text3)">LOADING</span>
+        </div>
+        <div class="meter-segs" id="mktMeter"></div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ════════ TICKER ════════ -->
+  <footer class="ticker">
+    <div class="ticker-label">LIVE ▸</div>
+    <div class="ticker-track">
+      <div class="ticker-scroll" id="tickerScroll">
+        <div class="ticker-item">BACKSTAX WORLD MONITOR — INITIALIZING DATA STREAMS</div>
+        <div class="ticker-item">CONNECTING TO GLOBAL INTELLIGENCE FEEDS...</div>
+      </div>
+    </div>
+  </footer>
+
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// BACKSTAX ENGINE — World Monitor v1.0
+// ═══════════════════════════════════════════════════════════════
+
+const $ = id => document.getElementById(id);
+
+// ─── MAP LAYERS ──────────────────────────────────────────────
+let MAP, qLayer, eLayer, iLayer, nLayer;
+
+// ─── STATE ───────────────────────────────────────────────────
+let quakes  = [];
+let events  = [];
+let newsItems = [];
+
+// ─── CITIES ──────────────────────────────────────────────────
+const CITIES = [
+  {name:'New York',  lat:40.71, lon:-74.01},
+  {name:'London',    lat:51.51, lon: -0.13},
+  {name:'Tokyo',     lat:35.68, lon:139.69},
+  {name:'Dubai',     lat:25.20, lon: 55.27},
+  {name:'Mumbai',    lat:19.08, lon: 72.88},
+  {name:'Moscow',    lat:55.75, lon: 37.62},
+  {name:'São Paulo', lat:-23.55,lon:-46.63},
+  {name:'Sydney',    lat:-33.87,lon:151.21},
+];
+
+// ─── NEWS LOCATIONS (approximate, for map pins) ───────────────
+const REGION_COORDS = {
+  'europe':    [50, 15], 'uk':[51.5,-0.1], 'russia':[60,90],
+  'china':     [35,105], 'india':[22,80],  'usa':[38,-97],
+  'middle':    [25,45],  'africa':[0,20],  'south america':[-15,-60],
+  'australia': [-25,133],'japan':[36,138], 'korea':[37,127],
+};
+
+// ═══════════════════════════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════════════════════════
+function updateClock(){
+  const n=new Date(); const u=new Date(n.getTime()+n.getTimezoneOffset()*60000);
+  const pad=x=>String(x).padStart(2,'0');
+  $('clockTime').textContent=`${pad(u.getHours())}:${pad(u.getMinutes())}:${pad(u.getSeconds())} UTC`;
+  const M=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const D=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  $('clockDate').textContent=`${D[u.getDay()]} ${M[u.getMonth()]} ${u.getDate()}, ${u.getFullYear()}`;
+}
+setInterval(updateClock,1000); updateClock();
+
+// ═══════════════════════════════════════════════════════════════
+// MAP INIT
+// ═══════════════════════════════════════════════════════════════
+function initMap(){
+  MAP = L.map('map',{
+    center:[20,0], zoom:2,
+    minZoom:2, maxZoom:10,
+    zoomControl:true,
+    attributionControl:true,
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    maxZoom:19, subdomains:'abcd',
+    attribution:'© CARTO'
+  }).addTo(MAP);
+
+  qLayer = L.layerGroup().addTo(MAP);
+  eLayer = L.layerGroup().addTo(MAP);
+  iLayer = L.layerGroup().addTo(MAP);
+  nLayer = L.layerGroup().addTo(MAP);
+
+  // Subtle equator + prime meridian lines
+  L.polyline([[0,-180],[0,180]],{color:'rgba(0,212,255,0.06)',weight:1,dashArray:'4,8'}).addTo(MAP);
+  L.polyline([[-90,0],[90,0]],  {color:'rgba(0,212,255,0.06)',weight:1,dashArray:'4,8'}).addTo(MAP);
+}
+
+// ─── Layer toggle ────────────────────────────────────────────
+const LAYERS = {};
+function toggleLayer(k, btn){
+  btn.classList.toggle('on');
+  const ly = {q:qLayer,e:eLayer,i:iLayer,n:nLayer}[k];
+  if(!ly) return;
+  MAP.hasLayer(ly) ? MAP.removeLayer(ly) : MAP.addLayer(ly);
+}
+
+function flyTo(lat,lng,z=5){
+  MAP.flyTo([lat,lng],z,{duration:1.8,easeLinearity:.4});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MARKERS
+// ═══════════════════════════════════════════════════════════════
+function mkIcon(html, size){
+  return L.divIcon({ className:'', html, iconSize:[size,size],
+    iconAnchor:[size/2,size/2] });
+}
+
+function quakeColor(m){
+  if(m>=7.5) return '#ff0033';
+  if(m>=7)   return '#ff2d55';
+  if(m>=6)   return '#ff6b35';
+  if(m>=5)   return '#f5a623';
+  return '#ffd166';
+}
+
+function eventColor(cat){
+  if(cat.includes('wildfire')||cat.includes('fire')) return '#ff4500';
+  if(cat.includes('storm'))  return '#60a5fa';
+  if(cat.includes('flood'))  return '#38bdf8';
+  if(cat.includes('volcano'))return '#ff6b35';
+  if(cat.includes('ice'))    return '#e0f2fe';
+  if(cat.includes('drought'))return '#d97706';
+  return '#f5a623';
+}
+
+function eventEmoji(cat){
+  if(cat.includes('wildfire')||cat.includes('fire')) return '🔥';
+  if(cat.includes('storm'))  return '⛈';
+  if(cat.includes('flood'))  return '🌊';
+  if(cat.includes('volcano'))return '🌋';
+  if(cat.includes('ice'))    return '❄';
+  if(cat.includes('drought'))return '☀';
+  return '🌪';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EARTHQUAKES — USGS
+// ═══════════════════════════════════════════════════════════════
+async function fetchEarthquakes(){
+  setStatus('FETCHING SEISMIC DATA...');
+  try {
+    const r = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson');
+    const d = await r.json();
+    quakes = d.features || [];
+
+    qLayer.clearLayers();
+
+    quakes.forEach(f=>{
+      const [lng,lat,dep] = f.geometry.coordinates;
+      const mag = f.properties.mag || 0;
+      const place = f.properties.place || 'Unknown region';
+      const t = new Date(f.properties.time);
+      const c = quakeColor(mag);
+      const sz = Math.max(8, mag * 4.5);
+
+      const icon = mkIcon(`
+        <div style="
+          width:${sz}px;height:${sz}px;
+          border-radius:50%;
+          background:${c}22;
+          border:2px solid ${c};
+          box-shadow:0 0 ${sz/2}px ${c}66;
+          animation:q-pulse 2.5s infinite;
+        "></div>`, sz);
+
+      L.marker([lat,lng],{icon})
+        .bindPopup(`
+          <div class="pp-title">⚡ M${mag.toFixed(1)} EARTHQUAKE</div>
+          <div class="pp-row">📍 ${place}</div>
+          <div class="pp-row">📏 Depth: ${dep.toFixed(0)} km</div>
+          <div class="pp-row">🕐 ${t.toUTCString()}</div>
+          <div class="pp-row" style="margin-top:5px;font-size:8px;color:var(--text3)">
+            Click map pin to dismiss
+          </div>
+        `)
+        .addTo(qLayer);
+    });
+
+    const cnt = quakes.length;
+    $('pQCount').textContent = cnt;
+    $('msQ').textContent = cnt;
+    renderQuakeList();
+    updateMeter('seisMeter','seisLabel', Math.min(10,Math.round(cnt/3)),
+      cnt<10?'LOW':cnt<25?'MODERATE':'ELEVATED',
+      cnt<10?'var(--green)':cnt<25?'var(--amber)':'var(--red)');
+
+  } catch(e){ console.warn('Quakes:',e); }
+}
+
+function renderQuakeList(){
+  const top = [...quakes].sort((a,b)=>b.properties.mag-a.properties.mag).slice(0,10);
+  $('quakeList').innerHTML = top.map(f=>{
+    const m   = f.properties.mag||0;
+    const p   = f.properties.place||'Unknown';
+    const t   = new Date(f.properties.time);
+    const c   = quakeColor(m);
+    const ago = timeAgo(t);
+    const [lng,lat] = f.geometry.coordinates;
+    return `
+      <div class="ev-item" onclick="flyTo(${lat},${lng},5)">
+        <div class="ev-head">
+          <div class="ev-dot" style="background:${c};box-shadow:0 0 4px ${c}"></div>
+          <div class="ev-name">${p.length>38?p.slice(0,38)+'…':p}</div>
+          <div class="ev-mag" style="color:${c}">M${m.toFixed(1)}</div>
+        </div>
+        <div class="ev-meta">${ago}</div>
+      </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NASA EONET — Earth Events
+// ═══════════════════════════════════════════════════════════════
+async function fetchEarthEvents(){
+  setStatus('FETCHING NASA EARTH EVENTS...');
+  try {
+    const r = await fetch('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=30');
+    const d = await r.json();
+    events = d.events || [];
+
+    eLayer.clearLayers();
+
+    events.forEach(ev=>{
+      const geo = ev.geometry?.[0];
+      if(!geo?.coordinates) return;
+      let lat,lng;
+      if(Array.isArray(geo.coordinates[0])){[lng,lat]=geo.coordinates[0];}
+      else{[lng,lat]=geo.coordinates;}
+      if(!lat||!lng||isNaN(lat)||isNaN(lng)) return;
+
+      const catId = ev.categories?.[0]?.id||'other';
+      const c  = eventColor(catId);
+
+      const icon = mkIcon(`
+        <div style="
+          width:8px;height:8px;
+          border-radius:50%;
+          background:${c}33;
+          border:2px solid ${c};
+          box-shadow:0 0 6px ${c};
+          animation:fire-flick 1.8s infinite alternate;
+        "></div>`, 8);
+
+      L.marker([lat,lng],{icon})
+        .bindPopup(`
+          <div class="pp-title">${eventEmoji(catId)} ${ev.title}</div>
+          <div class="pp-row">📂 ${ev.categories?.[0]?.title||'Event'}</div>
+          <div class="pp-row">📅 ${new Date(geo.date||Date.now()).toDateString()}</div>
+          <div class="pp-row">📍 ${lat.toFixed(2)}°, ${lng.toFixed(2)}°</div>
+        `)
+        .addTo(eLayer);
+    });
+
+    const cnt = events.length;
+    $('pECount').textContent = cnt;
+    $('msE').textContent = cnt;
+    renderEarthList();
+    updateMeter('evMeter','evLabel', Math.min(10,Math.round(cnt/4)),
+      cnt<15?'NORMAL':cnt<30?'ACTIVE':'ELEVATED',
+      cnt<15?'var(--green)':cnt<30?'var(--amber)':'var(--red)');
+
+  } catch(e){ console.warn('EONET:',e); }
+}
+
+function renderEarthList(){
+  $('earthList').innerHTML = events.slice(0,12).map(ev=>{
+    const catId = ev.categories?.[0]?.id||'';
+    const c  = eventColor(catId);
+    const em = eventEmoji(catId);
+    const geo = ev.geometry?.[0];
+    const hasC = geo?.coordinates && !Array.isArray(geo.coordinates[0]);
+    const lat = hasC?geo.coordinates[1]:null;
+    const lng = hasC?geo.coordinates[0]:null;
+    return `
+      <div class="ev-item" ${lat?`onclick="flyTo(${lat},${lng},5)"`:''}>
+        <div class="ev-head">
+          <div class="ev-dot" style="background:${c};box-shadow:0 0 4px ${c}"></div>
+          <div class="ev-name">${em} ${ev.title}</div>
+        </div>
+        <div class="ev-meta">${ev.categories?.[0]?.title||'Event'} · ${ev.geometry?.length||1} observations</div>
+      </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ISS TRACKER
+// ═══════════════════════════════════════════════════════════════
+async function fetchISS(){
+  try {
+    const r = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+    const d = await r.json();
+    const lat = parseFloat(d.latitude), lng = parseFloat(d.longitude);
+    const alt = parseFloat(d.altitude).toFixed(0);
+    const vel = parseInt(d.velocity).toLocaleString();
+    const latD = lat>=0?'N':'S', lngD = lng>=0?'E':'W';
+
+    $('issCoords').textContent = `${Math.abs(lat).toFixed(2)}°${latD}  ${Math.abs(lng).toFixed(2)}°${lngD}`;
+    $('issSub').textContent    = `ALT: ${alt} km  ·  VEL: ${vel} km/h`;
+
+    iLayer.clearLayers();
+    const icon = mkIcon(`
+      <div style="
+        width:12px;height:12px;
+        border-radius:50%;
+        background:var(--green);
+        border:2px solid rgba(0,255,136,.4);
+        box-shadow:0 0 14px var(--green);
+        animation:iss-blink 1s infinite;
+      "></div>`,12);
+    L.marker([lat,lng],{icon})
+      .bindPopup(`
+        <div class="pp-title">🛸 ISS — LIVE POSITION</div>
+        <div class="pp-row">📍 ${Math.abs(lat).toFixed(4)}°${latD}, ${Math.abs(lng).toFixed(4)}°${lngD}</div>
+        <div class="pp-row">↑ Altitude: ${alt} km</div>
+        <div class="pp-row">⚡ Velocity: ${vel} km/h</div>
+        <div class="pp-row">🌍 Orbital period: ~92 min</div>
+      `)
+      .addTo(iLayer);
+
+    $('pISS').className='pill live';
+
+  } catch(e){ console.warn('ISS:',e); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CRYPTO — CoinGecko (no key)
+// ═══════════════════════════════════════════════════════════════
+async function fetchCrypto(){
+  setStatus('FETCHING MARKET DATA...');
+  try {
+    const url='https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,binancecoin,ripple&vs_currencies=usd&include_24hr_change=true';
+    const r = await fetch(url);
+    const d = await r.json();
+
+    const fmtP = n => n>=1000?'$'+(n>=10000?(n/1000).toFixed(1)+'K':n.toLocaleString('en',{maximumFractionDigits:0})):'$'+n.toFixed(2);
+    const fmtC = n => (n>=0?'+':'')+n.toFixed(2)+'%';
+    const setC = (id,ch) => {
+      const el=$(`${id}C`); el.textContent=fmtC(ch);
+      el.className='cr-chg '+(ch>=0?'up':'down');
+    };
+
+    if(d.bitcoin){    $('btcP').textContent=fmtP(d.bitcoin.usd);    setC('btc',d.bitcoin.usd_24h_change||0); }
+    if(d.ethereum){   $('ethP').textContent=fmtP(d.ethereum.usd);   setC('eth',d.ethereum.usd_24h_change||0); }
+    if(d.solana){     $('solP').textContent=fmtP(d.solana.usd);     setC('sol',d.solana.usd_24h_change||0); }
+    if(d.binancecoin){$('bnbP').textContent=fmtP(d.binancecoin.usd);setC('bnb',d.binancecoin.usd_24h_change||0); }
+    if(d.ripple){     $('xrpP').textContent=fmtP(d.ripple.usd);     setC('xrp',d.ripple.usd_24h_change||0); }
+
+    // Market volatility meter
+    const avgAbs = ['bitcoin','ethereum','solana','binancecoin','ripple']
+      .filter(k=>d[k]).map(k=>Math.abs(d[k].usd_24h_change||0)).reduce((a,b)=>a+b,0)/5;
+    updateMeter('mktMeter','mktLabel',Math.min(10,Math.round(avgAbs*1.5)),
+      avgAbs<2?'CALM':avgAbs<5?'ACTIVE':'VOLATILE',
+      avgAbs<2?'var(--green)':avgAbs<5?'var(--amber)':'var(--red)');
+
+  } catch(e){ console.warn('Crypto:',e); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HEALTH — disease.sh
+// ═══════════════════════════════════════════════════════════════
+async function fetchHealth(){
+  setStatus('FETCHING HEALTH INTELLIGENCE...');
+  try {
+    const r = await fetch('https://disease.sh/v3/covid-19/all');
+    const d = await r.json();
+    const fmt=n=>n>=1e9?(n/1e9).toFixed(1)+'B':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(0)+'K':String(n);
+    $('hCases').textContent  = fmt(d.cases);
+    $('hDeaths').textContent = fmt(d.deaths);
+    $('hRecov').textContent  = fmt(d.recovered);
+    $('hActive').textContent = fmt(d.active);
+  } catch(e){ console.warn('Health:',e); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WEATHER — Open-Meteo (no key)
+// ═══════════════════════════════════════════════════════════════
+async function fetchWeather(){
+  setStatus('FETCHING WEATHER DATA...');
+  try {
+    const results = await Promise.all(
+      CITIES.map(c=>
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current_weather=true`)
+          .then(r=>r.json()).catch(()=>null)
+      )
+    );
+    const wxIcon=c=>{
+      if(c===0)return'☀'; if(c<=3)return'⛅'; if(c<=48)return'☁';
+      if(c<=67)return'🌧'; if(c<=77)return'❄'; if(c<=82)return'🌦'; return'⛈';
+    };
+    $('wxPanel').innerHTML = results.map((d,i)=>{
+      if(!d) return '';
+      const t  = d.current_weather?.temperature;
+      const wc = d.current_weather?.weathercode;
+      const clr = t>30?'var(--red)':t<0?'var(--blue)':'var(--text)';
+      return `
+        <div class="wx-row">
+          <div class="wx-ic">${wxIcon(wc)}</div>
+          <div class="wx-city">${CITIES[i].name}</div>
+          <div class="wx-temp" style="color:${clr}">${t!==undefined?t.toFixed(0)+'°C':'--'}</div>
+        </div>`;
+    }).join('');
+  } catch(e){ console.warn('Weather:',e); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NEWS — RSS2JSON + BBC World
+// ═══════════════════════════════════════════════════════════════
+async function fetchNews(){
+  setStatus('FETCHING WORLD INTEL...');
+  const RSS = 'https://feeds.bbci.co.uk/news/world/rss.xml';
+  const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS)}&count=20`;
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    if(d.status!=='ok'||!d.items) throw new Error('RSS fail');
+    newsItems = d.items;
+
+    $('msN').textContent = newsItems.length;
+    $('pNews').className = 'pill live';
+
+    // News feed panel
+    $('newsFeed').innerHTML = newsItems.slice(0,14).map(item=>{
+      const ago = timeAgo(new Date(item.pubDate));
+      return `
+        <div class="news-item" onclick="window.open('${item.link}','_blank')">
+          <div class="news-src">BBC WORLD</div>
+          <div class="news-title">${item.title}</div>
+          <div class="news-time">${ago}</div>
+        </div>`;
+    }).join('');
+
+    // News pins on map
+    nLayer.clearLayers();
+    newsItems.slice(0,8).forEach((item,idx)=>{
+      const [lat,lng] = newsLatLng(item.title, idx);
+      const icon = mkIcon(`
+        <div style="
+          width:7px;height:7px;
+          border-radius:50%;
+          background:var(--cyan3);
+          border:2px solid var(--cyan);
+          box-shadow:0 0 6px var(--cyan);
+        "></div>`,7);
+      L.marker([lat,lng],{icon})
+        .bindPopup(`
+          <div class="pp-title">📡 NEWS INTEL</div>
+          <div class="pp-row">${item.title}</div>
+          <div class="pp-row" style="margin-top:4px;font-size:8px;color:var(--text3)">${timeAgo(new Date(item.pubDate))}</div>
+        `)
+        .addTo(nLayer);
+    });
+
+    // Update ticker
+    buildTicker(newsItems);
+
+  } catch(e){
+    console.warn('News:',e);
+    $('newsFeed').innerHTML='<div class="empty">News feed temporarily unavailable</div>';
+    buildTickerFallback();
+  }
+}
+
+function newsLatLng(title, idx){
+  const t = title.toLowerCase();
+  for(const [key,coords] of Object.entries(REGION_COORDS)){
+    if(t.includes(key)) return [coords[0]+(Math.random()-.5)*8, coords[1]+(Math.random()-.5)*8];
+  }
+  // Scatter around known regions
+  const fallbacks=[[35,20],[20,80],[0,-30],[50,-100],[55,40],[-15,-50],[25,120],[60,10]];
+  const [la,lo]=fallbacks[idx%fallbacks.length];
+  return [la+(Math.random()-.5)*10, lo+(Math.random()-.5)*10];
+}
+
+function buildTicker(items){
+  const all = [...items,...items]; // seamless loop
+  $('tickerScroll').innerHTML = all.map(i=>
+    `<div class="ticker-item">${i.title}</div>`
+  ).join('');
+}
+
+function buildTickerFallback(){
+  const msgs = [
+    'BACKSTAX WORLD MONITOR — ALL SYSTEMS OPERATIONAL',
+    'SEISMIC DATA LIVE FROM USGS GLOBAL NETWORK',
+    'NASA EONET TRACKING OPEN NATURAL EVENTS',
+    'ISS POSITION UPDATING EVERY 10 SECONDS',
+    'GLOBAL CRYPTO MARKETS MONITORED IN REAL-TIME',
+  ];
+  const all = [...msgs,...msgs];
+  $('tickerScroll').innerHTML = all.map(m=>`<div class="ticker-item">${m}</div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// METERS
+// ═══════════════════════════════════════════════════════════════
+function initMeters(){
+  ['seisMeter','evMeter','mktMeter'].forEach(id=>{
+    $(id).innerHTML = Array(10).fill('<div class="seg"></div>').join('');
+  });
+}
+
+function updateMeter(meterId, labelId, level, text, color){
+  const segs = $(meterId).querySelectorAll('.seg');
+  segs.forEach((s,i)=>{
+    s.className='seg';
+    if(i<level){
+      if(i<3)s.classList.add('low');
+      else if(i<7)s.classList.add('mid');
+      else s.classList.add('hi');
+    }
+  });
+  const el=$(labelId);
+  el.textContent=text;
+  el.style.color=color;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function timeAgo(d){
+  const s=Math.floor((new Date()-d)/1000);
+  if(s<60)   return s+'s ago';
+  if(s<3600) return Math.floor(s/60)+'m ago';
+  if(s<86400)return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+
+function setStatus(msg){
+  const el=$('ldStatus');
+  if(el) el.textContent=msg;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOOTSTRAP
+// ═══════════════════════════════════════════════════════════════
+async function boot(){
+  initMap();
+  initMeters();
+  buildTickerFallback();
+
+  // Sequential fetch with status updates
+  await fetchEarthquakes();
+  await fetchEarthEvents();
+  await fetchCrypto();
+  await fetchHealth();
+  await fetchWeather();
+  await fetchNews();
+  await fetchISS();
+
+  // Hide loader
+  setTimeout(()=>{
+    const ld=$('loader');
+    ld.classList.add('fade');
+    setTimeout(()=>ld.style.display='none', 550);
+  }, 800);
+
+  // Real-time ISS every 10s
+  setInterval(fetchISS, 10000);
+
+  // Crypto every 60s
+  setInterval(fetchCrypto, 60000);
+
+  // Quakes every 5min
+  setInterval(fetchEarthquakes, 300000);
+
+  // Earth events every 10min
+  setInterval(fetchEarthEvents, 600000);
+
+  // News every 15min
+  setInterval(fetchNews, 900000);
+}
+
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>
