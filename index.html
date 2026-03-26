@@ -3,24 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-<meta name="theme-color" content="#0f172a">
+
+<!-- FIX 2: theme-color corrected to brand primary #2563eb (was dark #0f172a) -->
+<meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="description" content="BACKSTAX — Real-time world intelligence monitor">
+<meta name="description" content="BACKSTAX — Real-time world intelligence monitor. Seismic, geopolitical, market, and space data in one unified view.">
+
+<!-- FIX 11: Open Graph / social meta tags -->
+<meta property="og:title"       content="BACKSTAX · World Monitor">
+<meta property="og:description" content="Real-time global intelligence — seismic, geopolitical, market and space data unified.">
+<meta property="og:type"        content="website">
+<meta property="og:image"       content="https://backstax.vercel.app/og-cover.png">
+<meta name="twitter:card"       content="summary_large_image">
+<meta name="twitter:title"      content="BACKSTAX · World Monitor">
+<meta name="twitter:description"content="Signal over noise. Live world intelligence.">
+
 <title>BACKSTAX · World Monitor</title>
+
+<!-- FIX 10: Inline SVG favicon — the hex mark, no external file needed -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='16,2 28,9 28,23 16,30 4,23 4,9' fill='%23eff6ff' stroke='%232563eb' stroke-width='1.6'/%3E%3Cpolygon points='16,9 23,13 23,19 16,23 9,19 9,13' fill='%23dbeafe' stroke='%232563eb' stroke-width='.9' opacity='.7'/%3E%3Ccircle cx='16' cy='16' r='3.5' fill='%232563eb'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563eb'/%3E%3Cpolygon points='16,3 27,9 27,21 16,28 5,21 5,9' fill='none' stroke='white' stroke-width='1.6'/%3E%3Ccircle cx='16' cy='15' r='3' fill='white'/%3E%3C/svg%3E">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
-/* ══════════════════════════════════════════════
-   BACKSTAX v4 — GODMODE STYLESHEET
-   Split architecture: CSS only here, no inline JS
-   ══════════════════════════════════════════════ */
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ══════════════════════════════════════════════════════════════
+   BACKSTAX v4 — PRODUCTION STYLESHEET
+   ══════════════════════════════════════════════════════════════ */
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
 
 :root {
   --bg:        #eef2f7;
@@ -33,7 +48,7 @@
   --shadow-sm: 0 1px 4px rgba(15,23,42,.07), 0 2px 12px rgba(15,23,42,.04);
   --shadow:    0 4px 16px rgba(15,23,42,.08), 0 1px 4px rgba(15,23,42,.06);
   --shadow-lg: 0 8px 32px rgba(15,23,42,.12), 0 2px 8px rgba(15,23,42,.06);
-  --primary:   #2563eb;  --primary-l: #eff6ff; --primary-m: #bfdbfe;
+  --primary:   #2563eb;  --primary-l: #eff6ff;  --primary-m: #bfdbfe;
   --text:  #0f172a;  --text2: #475569;  --text3: #94a3b8;  --text4: #e2e8f0;
   --green:  #059669;  --green-l:  #ecfdf5;  --green-m:  #a7f3d0;
   --amber:  #d97706;  --amber-l:  #fffbeb;  --amber-m:  #fde68a;
@@ -47,30 +62,42 @@
   --safe-b: env(safe-area-inset-bottom,0px);
   --safe-l: env(safe-area-inset-left,0px);
   --safe-r: env(safe-area-inset-right,0px);
-  --dur-fast: 150ms; --dur-med: 220ms; --dur-slow: 360ms;
+  --dur-fast:   150ms;
+  --dur-med:    220ms;
+  --dur-slow:   360ms;
   --dur-spring: 280ms;
   --ease-spring: cubic-bezier(.34,1.46,.64,1);
   --ease-out:    cubic-bezier(.22,1,.36,1);
 }
 
+/* FIX 9: Reduced motion — disable will-change and animations */
 @media (prefers-reduced-motion: reduce) {
-  :root { --dur-fast:0ms; --dur-med:0ms; --dur-slow:0ms; --dur-spring:0ms; }
-  *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.01ms!important; }
+  :root {
+    --dur-fast:0ms; --dur-med:0ms; --dur-slow:0ms; --dur-spring:0ms;
+  }
+  *,*::before,*::after {
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+    will-change:auto!important;          /* ← added: clears all will-change */
+    scroll-behavior:auto!important;
+  }
 }
 
 html { height:100%; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
 body {
-  height:100%; background:var(--bg); color:var(--text); font-family:var(--fp);
-  overflow:hidden; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  height:100%; background:var(--bg); color:var(--text);
+  font-family:var(--fp); overflow:hidden;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
   -webkit-tap-highlight-color:transparent; contain:layout style;
 }
 
 /* ── APP GRID ── */
 .app {
   display:grid;
-  grid-template-rows: 54px 1fr 36px;
-  grid-template-columns: 272px 1fr 298px;
-  grid-template-areas: "hdr hdr hdr" "lft map rgt" "tkr tkr tkr";
+  grid-template-rows:54px 1fr 36px;
+  grid-template-columns:272px 1fr 298px;
+  grid-template-areas:"hdr hdr hdr" "lft map rgt" "tkr tkr tkr";
   height:100vh; height:100dvh; width:100vw;
 }
 
@@ -100,14 +127,15 @@ header {
 }
 .pill .dot { width:5px; height:5px; border-radius:50%; animation:blink-dot 2.2s ease-in-out infinite; flex-shrink:0; }
 @keyframes blink-dot { 0%,100%{opacity:1}50%{opacity:.2} }
-.p-live { background:var(--green-l); color:var(--green); border-color:var(--green-m); }
+.p-live { background:var(--green-l);   color:var(--green);   border-color:var(--green-m); }
 .p-live .dot { background:var(--green); }
 .p-info { background:var(--primary-l); color:var(--primary); border-color:var(--primary-m); }
 .p-info .dot { background:var(--primary); }
-.p-warn { background:var(--amber-l); color:var(--amber); border-color:var(--amber-m); }
+.p-warn { background:var(--amber-l);   color:var(--amber);   border-color:var(--amber-m); }
 .p-warn .dot { background:var(--amber); }
-.p-crit { background:var(--red-l); color:var(--red); border-color:var(--red-m); }
+.p-crit { background:var(--red-l);     color:var(--red);     border-color:var(--red-m); }
 .p-crit .dot { background:var(--red); }
+
 .hdr-right { display:flex; align-items:center; gap:10px; margin-left:auto; flex-shrink:0; }
 .threat-chip {
   display:flex; align-items:center; gap:6px; padding:4px 11px;
@@ -123,7 +151,7 @@ header {
 .clock-date { font-size:9px; font-weight:500; letter-spacing:.06em; color:var(--text3); }
 
 /* ── PANELS ── */
-.left-panel, .right-panel {
+.left-panel,.right-panel {
   background:var(--bg); overflow-y:auto; overflow-x:hidden;
   -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
   scrollbar-width:thin; scrollbar-color:var(--border-md) transparent;
@@ -140,142 +168,171 @@ header {
 .card-hdr { display:flex; align-items:center; gap:8px; padding:10px 13px 9px; border-bottom:1px solid var(--border); }
 .card-title { font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--text); flex:1; }
 .badge { font-size:8px; font-weight:700; letter-spacing:.07em; padding:2px 7px; border-radius:10px; }
-.b-green { background:var(--green-l); color:var(--green); }
-.b-blue  { background:var(--primary-l); color:var(--primary); }
-.b-amber { background:var(--amber-l); color:var(--amber); }
-.b-red   { background:var(--red-l); color:var(--red); }
-.b-sky   { background:var(--sky-l); color:var(--sky); }
-.b-purple{ background:var(--purple-l); color:var(--purple); }
+.b-green  { background:var(--green-l);   color:var(--green); }
+.b-blue   { background:var(--primary-l); color:var(--primary); }
+.b-amber  { background:var(--amber-l);   color:var(--amber); }
+.b-red    { background:var(--red-l);     color:var(--red); }
+.b-sky    { background:var(--sky-l);     color:var(--sky); }
+.b-purple { background:var(--purple-l);  color:var(--purple); }
 .icon-btn {
   width:24px; height:24px; border-radius:7px; border:1px solid var(--border-md);
   background:var(--surface2); color:var(--text3); font-size:13px; cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
-  transition:background var(--dur-fast),color var(--dur-fast),border-color var(--dur-fast),transform var(--dur-fast);
-  flex-shrink:0; font-family:var(--fp); outline:none;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  font-family:var(--fp); outline:none;
+  transition:background var(--dur-fast),color var(--dur-fast),
+             border-color var(--dur-fast),transform var(--dur-fast);
 }
 .icon-btn:hover,.icon-btn:focus-visible { background:var(--primary-l); color:var(--primary); border-color:var(--primary-m); }
 .icon-btn:active { transform:scale(.9); }
 .icon-btn:focus-visible { box-shadow:0 0 0 2px var(--primary-l),0 0 0 3.5px var(--primary); }
 .card-body { padding:10px 13px; }
 
-/* ── SKELETON ── */
+/* ── SKELETON LOADER ── */
 @keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
-.skel { background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%); background-size:200% 100%; animation:shimmer 1.6s ease-in-out infinite; border-radius:6px; will-change:background-position; }
+.skel {
+  background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);
+  background-size:200% 100%;
+  animation:shimmer 1.6s ease-in-out infinite;
+  border-radius:6px; will-change:background-position;
+}
 .skel-line { height:10px; margin-bottom:8px; }
-.skel-line.w70 { width:70%; } .skel-line.w50 { width:50%; } .skel-line.w85 { width:85%; }
+.skel-line.w70 { width:70%; }
+.skel-line.w50 { width:50%; }
+.skel-line.w85 { width:85%; }
 .skel-block { height:42px; margin-bottom:6px; border-radius:9px; }
 
 /* ── CRYPTO LIST ── */
 .cr-list { display:flex; flex-direction:column; }
-.cr { display:flex; align-items:center; gap:9px; padding:7px 9px; border-radius:9px; cursor:pointer; transition:background var(--dur-fast); outline:none; }
+/* FIX 5: tabindex added in HTML; focus-visible ring here */
+.cr {
+  display:flex; align-items:center; gap:9px; padding:7px 9px;
+  border-radius:9px; cursor:pointer; outline:none;
+  transition:background var(--dur-fast);
+}
 .cr:hover,.cr:focus-visible { background:var(--surface2); }
 .cr:focus-visible { box-shadow:inset 0 0 0 1.5px var(--primary-m); }
 .cr-icon { width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; flex-shrink:0; letter-spacing:-.02em; }
 .cr-info { flex:1; min-width:0; }
-.cr-sym { font-size:10.5px; font-weight:700; color:var(--text); line-height:1; font-variant-numeric:tabular-nums; }
+.cr-sym  { font-size:10.5px; font-weight:700; color:var(--text); line-height:1; font-variant-numeric:tabular-nums; }
 .cr-name { font-size:8px; font-weight:400; color:var(--text3); margin-top:1px; }
 .cr-spark { width:52px; height:26px; flex-shrink:0; display:block; }
 .cr-right { text-align:right; min-width:58px; }
 .cr-price { font-size:12px; font-weight:700; color:var(--text); line-height:1.2; font-variant-numeric:tabular-nums; }
-.cr-chg { font-size:9px; font-weight:600; margin-top:1px; font-variant-numeric:tabular-nums; }
-.up { color:var(--green); } .down { color:var(--red); }
+.cr-chg   { font-size:9px; font-weight:600; margin-top:1px; font-variant-numeric:tabular-nums; }
+.up   { color:var(--green); }
+.down { color:var(--red); }
 
 /* ── STAT GRID ── */
 .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-.stat-cell { padding:8px 10px; border-radius:9px; background:var(--surface2); border:1px solid var(--border); transition:background var(--dur-fast),box-shadow var(--dur-fast); }
+.stat-cell {
+  padding:8px 10px; border-radius:9px;
+  background:var(--surface2); border:1px solid var(--border);
+  transition:background var(--dur-fast),box-shadow var(--dur-fast);
+}
 .stat-cell:hover { background:var(--primary-l); box-shadow:var(--shadow-xs); }
 .stat-v { display:block; font-size:16px; font-weight:800; line-height:1.2; font-variant-numeric:tabular-nums; }
 .stat-l { display:block; font-size:7.5px; font-weight:600; letter-spacing:.10em; text-transform:uppercase; color:var(--text3); margin-top:2px; }
 
-/* ── GEOPOLITICAL PANEL ── */
-.geo-ev {
-  display:flex; align-items:center; gap:8px; padding:5px 9px;
-  border-radius:8px; font-size:9px; color:var(--text2);
-}
+/* ── GEOPOLITICAL CONFLICT LIST ── */
+.geo-ev { display:flex; align-items:center; gap:8px; padding:5px 9px; border-radius:8px; font-size:9px; color:var(--text2); transition:background var(--dur-fast); }
 .geo-ev:hover { background:var(--surface2); }
 .geo-sev-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-.geo-ev-name { flex:1; font-weight:600; font-size:9.5px; }
+.geo-ev-name { flex:1; font-weight:600; font-size:9.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .geo-ev-type { font-size:8px; color:var(--text3); white-space:nowrap; text-transform:capitalize; }
 
 /* ── ISS ── */
 .iss-card { display:flex; align-items:center; gap:12px; padding:2px 0; }
-.iss-vis { width:46px; height:46px; border-radius:50%; flex-shrink:0; background:radial-gradient(circle at 35% 35%,var(--sky-l),var(--primary-l)); border:2px solid var(--primary-m); display:flex; align-items:center; justify-content:center; font-size:22px; position:relative; isolation:isolate; }
+.iss-vis {
+  width:46px; height:46px; border-radius:50%; flex-shrink:0;
+  background:radial-gradient(circle at 35% 35%,var(--sky-l),var(--primary-l));
+  border:2px solid var(--primary-m);
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; position:relative; isolation:isolate;
+}
 .iss-orbit { position:absolute; inset:-7px; border-radius:50%; border:1.5px dashed var(--primary-m); animation:orbit-ring 6s linear infinite; will-change:transform; }
 @keyframes orbit-ring { to{transform:rotate(360deg)} }
 .iss-data { flex:1; min-width:0; }
 .iss-coords { font-size:12.5px; font-weight:700; color:var(--primary); letter-spacing:.03em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums; }
-.iss-sub { font-size:8.5px; color:var(--text3); margin-top:2px; line-height:1.5; }
-.iss-live { display:flex; align-items:center; gap:5px; margin-top:4px; }
-.iss-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:blink-live 1s ease-in-out infinite; flex-shrink:0; }
+.iss-sub    { font-size:8.5px; color:var(--text3); margin-top:2px; line-height:1.5; }
+.iss-live   { display:flex; align-items:center; gap:5px; margin-top:4px; }
+.iss-dot    { width:6px; height:6px; border-radius:50%; background:var(--green); animation:blink-live 1s ease-in-out infinite; flex-shrink:0; }
 @keyframes blink-live { 0%,100%{opacity:1}50%{opacity:.15} }
-.iss-ltxt { font-size:8.5px; font-weight:600; color:var(--green); }
+.iss-ltxt   { font-size:8.5px; font-weight:600; color:var(--green); }
 
 /* ── WEATHER ── */
 .wx-list { display:flex; flex-direction:column; }
-.wx { display:flex; align-items:center; gap:8px; padding:6px 9px; border-radius:8px; cursor:pointer; transition:background var(--dur-fast); outline:none; }
+.wx { display:flex; align-items:center; gap:8px; padding:6px 9px; border-radius:8px; cursor:pointer; outline:none; transition:background var(--dur-fast); }
 .wx:hover,.wx:focus-visible { background:var(--surface2); }
 .wx:focus-visible { box-shadow:inset 0 0 0 1.5px var(--primary-m); }
-.wx-ic { font-size:15px; width:20px; text-align:center; flex-shrink:0; }
+.wx-ic   { font-size:15px; width:20px; text-align:center; flex-shrink:0; }
 .wx-city { font-size:10px; font-weight:600; flex:1; color:var(--text); }
 .wx-wind { font-size:8px; color:var(--text3); white-space:nowrap; }
 .wx-temp { font-size:12.5px; font-weight:700; min-width:38px; text-align:right; font-variant-numeric:tabular-nums; }
 
 /* ── EVENT ROWS ── */
 .ev-list { display:flex; flex-direction:column; }
-.ev { display:flex; align-items:flex-start; gap:9px; padding:7px 9px; border-radius:9px; cursor:pointer; transition:background var(--dur-fast); outline:none; }
+/* FIX 5: tabindex added in HTML; focus ring here */
+.ev { display:flex; align-items:flex-start; gap:9px; padding:7px 9px; border-radius:9px; cursor:pointer; outline:none; transition:background var(--dur-fast); }
 .ev:hover,.ev:focus-visible { background:var(--surface2); }
 .ev:focus-visible { box-shadow:inset 0 0 0 1.5px var(--primary-m); }
 .ev-badge { min-width:32px; height:22px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:800; flex-shrink:0; margin-top:1px; }
-.ev-body { flex:1; min-width:0; }
-.ev-name { font-size:9.5px; font-weight:500; line-height:1.38; color:var(--text); }
-.ev-meta { font-size:8px; color:var(--text3); margin-top:2px; }
+.ev-body  { flex:1; min-width:0; }
+.ev-name  { font-size:9.5px; font-weight:500; line-height:1.38; color:var(--text); }
+.ev-meta  { font-size:8px; color:var(--text3); margin-top:2px; }
 
 /* ── NEWS ── */
 .news-tabs { display:flex; gap:3px; padding:7px 13px; border-bottom:1px solid var(--border); }
-.ntab { padding:3px 10px; border-radius:7px; font-size:9px; font-weight:600; letter-spacing:.05em; cursor:pointer; color:var(--text3); background:transparent; border:none; transition:background var(--dur-fast),color var(--dur-fast); font-family:var(--fp); outline:none; }
+.ntab {
+  padding:3px 10px; border-radius:7px; font-size:9px; font-weight:600; letter-spacing:.05em;
+  cursor:pointer; color:var(--text3); background:transparent; border:none; outline:none;
+  transition:background var(--dur-fast),color var(--dur-fast); font-family:var(--fp);
+}
 .ntab.on { background:var(--primary); color:#fff; }
 .ntab:hover:not(.on),.ntab:focus-visible:not(.on) { background:var(--primary-l); color:var(--primary); }
 .ntab:focus-visible { box-shadow:0 0 0 2px var(--primary-m); }
 .news-list { display:flex; flex-direction:column; }
-.ni { padding:8px 13px; border-bottom:1px solid var(--border); cursor:pointer; transition:background var(--dur-fast); outline:none; }
+.ni {
+  padding:8px 13px; border-bottom:1px solid var(--border);
+  cursor:pointer; outline:none; transition:background var(--dur-fast);
+}
 .ni:last-child { border-bottom:none; }
 .ni:hover,.ni:focus-visible { background:var(--surface2); }
 .ni:focus-visible { box-shadow:inset 0 0 0 1.5px var(--primary-m); }
 .ni-src { font-size:8px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin-bottom:3px; display:flex; align-items:center; gap:4px; }
 .ni-title-row { display:flex; align-items:flex-start; gap:6px; }
 .ni-title { font-size:10px; font-weight:500; line-height:1.42; color:var(--text); flex:1; }
-.ni-time { font-size:8px; color:var(--text3); margin-top:3px; }
+.ni-time  { font-size:8px; color:var(--text3); margin-top:3px; }
 .ni-map-btn {
   flex-shrink:0; background:none; border:none; cursor:pointer;
   font-size:11px; padding:1px 3px; border-radius:4px;
   opacity:.6; transition:opacity var(--dur-fast),transform var(--dur-fast);
-  font-family:var(--fp);
+  font-family:var(--fp); outline:none; line-height:1;
 }
-.ni-map-btn:hover { opacity:1; transform:scale(1.2); }
+.ni-map-btn:hover,.ni-map-btn:focus-visible { opacity:1; transform:scale(1.15); }
+.ni-map-btn:focus-visible { box-shadow:0 0 0 1.5px var(--primary-m); border-radius:4px; }
 
 /* ── PULSE BARS ── */
 .pulse-wrap { padding:10px 13px; display:flex; flex-direction:column; gap:11px; }
-.pulse-row {}
-.pulse-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
-.pulse-lbl { font-size:9px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--text2); }
-.pulse-val { font-size:9px; font-weight:700; font-variant-numeric:tabular-nums; }
+.pulse-hdr  { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.pulse-lbl  { font-size:9px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--text2); }
+.pulse-val  { font-size:9px; font-weight:700; font-variant-numeric:tabular-nums; }
 .pulse-track { height:5px; background:var(--surface3); border-radius:5px; overflow:hidden; transform:translateZ(0); }
-.pulse-fill { height:100%; border-radius:5px; transition:width var(--dur-slow) cubic-bezier(.4,0,.2,1),background var(--dur-slow); will-change:width; }
+.pulse-fill  { height:100%; border-radius:5px; will-change:width; transition:width var(--dur-slow) cubic-bezier(.4,0,.2,1),background var(--dur-slow); }
 
 /* ── THREAT RING ── */
-.threat-block { padding:10px 13px; border-top:1px solid var(--border); }
-.threat-hdr { font-size:9px; font-weight:700; letter-spacing:.11em; text-transform:uppercase; color:var(--text2); margin-bottom:9px; }
-.threat-row { display:flex; align-items:center; gap:12px; }
-.ring-wrap { position:relative; width:60px; height:60px; flex-shrink:0; isolation:isolate; }
+.threat-block   { padding:10px 13px; border-top:1px solid var(--border); }
+.threat-hdr     { font-size:9px; font-weight:700; letter-spacing:.11em; text-transform:uppercase; color:var(--text2); margin-bottom:9px; }
+.threat-row     { display:flex; align-items:center; gap:12px; }
+.ring-wrap      { position:relative; width:60px; height:60px; flex-shrink:0; isolation:isolate; }
 .ring-wrap canvas { position:absolute; inset:0; }
-.ring-num { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1; }
-.ring-num-val { font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; }
-.ring-num-sub { font-size:7px; font-weight:500; color:var(--text3); }
-.threat-info { flex:1; }
-.threat-status { font-size:13px; font-weight:800; line-height:1.2; }
-.threat-desc   { font-size:8.5px; color:var(--text2); line-height:1.45; margin-top:3px; }
+.ring-num       { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1; }
+.ring-num-val   { font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; }
+.ring-num-sub   { font-size:7px; font-weight:500; color:var(--text3); }
+.threat-info    { flex:1; }
+.threat-status  { font-size:13px; font-weight:800; line-height:1.2; }
+.threat-desc    { font-size:8.5px; color:var(--text2); line-height:1.45; margin-top:3px; }
 .threat-factors { margin-top:9px; display:flex; flex-direction:column; gap:4px; }
-.tf { display:flex; align-items:center; gap:7px; }
+.tf     { display:flex; align-items:center; gap:7px; }
 .tf-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
 .tf-lbl { font-size:8.5px; color:var(--text2); flex:1; }
 .tf-val { font-size:8.5px; font-weight:700; font-variant-numeric:tabular-nums; }
@@ -294,48 +351,68 @@ header {
 .leaflet-popup-content { margin:0!important; padding:12px 15px!important; font-size:10px!important; line-height:1.6!important; }
 .leaflet-popup-tip-container { display:none; }
 .leaflet-popup-close-button { color:var(--text3)!important; font-size:16px!important; top:7px!important; right:9px!important; }
-.pp-head { font-size:11.5px; font-weight:700; color:var(--text); margin-bottom:7px; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.pp-head  { font-size:11.5px; font-weight:700; color:var(--text); margin-bottom:7px; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
 .pp-badge { font-size:8px; padding:2px 7px; border-radius:10px; font-weight:700; }
-.pp-grid { display:grid; grid-template-columns:auto 1fr; gap:3px 9px; font-size:9.5px; }
+.pp-grid  { display:grid; grid-template-columns:auto 1fr; gap:3px 9px; font-size:9.5px; }
 .pp-k { color:var(--text3); font-weight:500; }
 .pp-v { color:var(--text); font-weight:600; font-variant-numeric:tabular-nums; }
+
+/* Map chrome corners */
 .mc { position:absolute; z-index:800; pointer-events:none; width:14px; height:14px; }
-.mc-tl { top:10px; left:10px;    border-top:2px solid var(--primary); border-left:2px solid var(--primary);   opacity:.35; }
-.mc-tr { top:10px; right:10px;   border-top:2px solid var(--primary); border-right:2px solid var(--primary);  opacity:.35; }
-.mc-bl { bottom:10px; left:10px; border-bottom:2px solid var(--primary); border-left:2px solid var(--primary); opacity:.35; }
-.mc-br { bottom:10px; right:10px;border-bottom:2px solid var(--primary); border-right:2px solid var(--primary);opacity:.35; }
+.mc-tl { top:10px;    left:10px;   border-top:2px solid var(--primary);    border-left:2px solid var(--primary);   opacity:.35; }
+.mc-tr { top:10px;    right:10px;  border-top:2px solid var(--primary);    border-right:2px solid var(--primary);  opacity:.35; }
+.mc-bl { bottom:10px; left:10px;   border-bottom:2px solid var(--primary); border-left:2px solid var(--primary);   opacity:.35; }
+.mc-br { bottom:10px; right:10px;  border-bottom:2px solid var(--primary); border-right:2px solid var(--primary);  opacity:.35; }
+
+/* Map toolbar */
 .map-toolbar { position:absolute; top:11px; left:50%; transform:translateX(-50%); z-index:801; display:flex; gap:4px; pointer-events:all; }
-.map-btn { display:flex; align-items:center; gap:5px; padding:5px 12px; border-radius:20px; font-family:var(--fp); font-size:9.5px; font-weight:600; letter-spacing:.04em; background:var(--surface); border:1px solid var(--border-md); color:var(--text2); cursor:pointer; box-shadow:var(--shadow-sm); transition:background var(--dur-fast),color var(--dur-fast),border-color var(--dur-fast),box-shadow var(--dur-fast),transform var(--dur-fast); outline:none; -webkit-tap-highlight-color:transparent; }
+.map-btn {
+  display:flex; align-items:center; gap:5px; padding:5px 12px; border-radius:20px;
+  font-family:var(--fp); font-size:9.5px; font-weight:600; letter-spacing:.04em;
+  background:var(--surface); border:1px solid var(--border-md); color:var(--text2);
+  cursor:pointer; box-shadow:var(--shadow-sm); outline:none;
+  -webkit-tap-highlight-color:transparent;
+  transition:background var(--dur-fast),color var(--dur-fast),
+             border-color var(--dur-fast),box-shadow var(--dur-fast),transform var(--dur-fast);
+}
 .map-btn .mb-dot { width:5px; height:5px; border-radius:50%; background:var(--text4); transition:background var(--dur-fast); }
 .map-btn.on { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:var(--shadow-sm),0 0 0 3px rgba(37,99,235,.15); }
 .map-btn.on .mb-dot { background:rgba(255,255,255,.7); }
 .map-btn:hover:not(.on),.map-btn:focus-visible:not(.on) { border-color:var(--primary-m); color:var(--primary); background:var(--primary-l); }
 .map-btn:active { transform:scale(.96); }
 .map-btn:focus-visible { box-shadow:var(--shadow-sm),0 0 0 2px var(--primary-l),0 0 0 3.5px var(--primary); }
+
+/* Map stats */
 .map-stats { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); z-index:800; display:flex; gap:3px; pointer-events:none; }
 .ms { padding:5px 16px; background:var(--surface); border:1px solid var(--border-md); border-radius:9px; text-align:center; box-shadow:var(--shadow-sm); }
 .ms-val { display:block; font-size:15px; font-weight:800; color:var(--text); line-height:1.1; font-variant-numeric:tabular-nums; }
 .ms-lbl { font-size:7px; font-weight:600; letter-spacing:.12em; color:var(--text3); text-transform:uppercase; }
 
-/* ── MAP LEGEND ── */
+/* Map legend */
 .map-legend { position:absolute; bottom:58px; right:11px; z-index:800; background:var(--surface); border:1px solid var(--border-md); border-radius:10px; padding:9px 12px; box-shadow:var(--shadow-sm); pointer-events:none; }
-.ml-title { font-size:7px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--text3); margin-bottom:7px; }
+.ml-title   { font-size:7px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--text3); margin-bottom:7px; }
 .ml-section { font-size:7px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--text3); margin:5px 0 3px; opacity:.7; }
-.ml-row { display:flex; align-items:center; gap:7px; font-size:8.5px; color:var(--text2); margin-bottom:4px; font-weight:500; }
-.ml-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-.ml-circle { width:10px; height:10px; border-radius:50%; border:2px solid currentColor; flex-shrink:0; opacity:.7; }
+.ml-row     { display:flex; align-items:center; gap:7px; font-size:8.5px; color:var(--text2); margin-bottom:4px; font-weight:500; }
+.ml-dot     { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.ml-circle  { width:10px; height:10px; border-radius:50%; border:2px solid currentColor; flex-shrink:0; opacity:.7; }
 
-/* ── MARKER ANIMATIONS ── */
-@keyframes qpulse { 0%{box-shadow:0 0 0 0 rgba(220,38,38,.55)}70%{box-shadow:0 0 0 9px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)} }
-@keyframes flickr { 0%,100%{transform:scale(1)}50%{transform:scale(1.18)} }
+/* Marker animations */
+@keyframes qpulse   { 0%{box-shadow:0 0 0 0 rgba(220,38,38,.55)}70%{box-shadow:0 0 0 9px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)} }
+@keyframes flickr   { 0%,100%{transform:scale(1)}50%{transform:scale(1.18)} }
 @keyframes isspulse { 0%{box-shadow:0 0 0 0 rgba(5,150,105,.7)}70%{box-shadow:0 0 0 12px rgba(5,150,105,0)}100%{box-shadow:0 0 0 0 rgba(5,150,105,0)} }
 
 /* ── TICKER ── */
-.ticker { grid-area:tkr; display:flex; align-items:center; background:var(--surface); backdrop-filter:blur(8px) saturate(1.2); -webkit-backdrop-filter:blur(8px) saturate(1.2); border-top:1px solid var(--border); box-shadow:0 -1px 4px rgba(15,23,42,.04); overflow:hidden; position:relative; contain:layout style paint; }
+.ticker {
+  grid-area:tkr; display:flex; align-items:center; background:var(--surface);
+  backdrop-filter:blur(8px) saturate(1.2); -webkit-backdrop-filter:blur(8px) saturate(1.2);
+  border-top:1px solid var(--border);
+  box-shadow:0 -1px 4px rgba(15,23,42,.04); overflow:hidden; position:relative;
+  contain:layout style paint;
+}
 .ticker::after { content:''; position:absolute; top:0; right:0; bottom:0; width:80px; background:linear-gradient(to right,transparent,var(--surface)); z-index:2; pointer-events:none; }
 .tkr-badge { display:flex; align-items:center; gap:6px; padding:0 14px; flex-shrink:0; border-right:1px solid var(--border); height:100%; background:var(--primary-l); z-index:3; position:relative; }
-.tkr-dot { width:5px; height:5px; border-radius:50%; background:var(--primary); animation:blink-dot 1.4s ease-in-out infinite; }
-.tkr-lbl { font-size:9.5px; font-weight:700; letter-spacing:.10em; color:var(--primary); text-transform:uppercase; }
+.tkr-dot   { width:5px; height:5px; border-radius:50%; background:var(--primary); animation:blink-dot 1.4s ease-in-out infinite; }
+.tkr-lbl   { font-size:9.5px; font-weight:700; letter-spacing:.10em; color:var(--primary); text-transform:uppercase; }
 .tkr-track { flex:1; overflow:hidden; height:100%; position:relative; }
 .tkr-inner { display:inline-flex; align-items:center; white-space:nowrap; height:100%; animation:marquee 140s linear infinite; will-change:transform; }
 .tkr-inner:hover { animation-play-state:paused; }
@@ -344,28 +421,56 @@ header {
 .tkr-item::before { content:'◆'; font-size:5px; color:var(--primary); opacity:.6; }
 
 /* ── MOBILE NAV ── */
-.mob-nav { display:none; grid-area:mnav; background:var(--surface); backdrop-filter:blur(12px) saturate(1.4); -webkit-backdrop-filter:blur(12px) saturate(1.4); border-top:1px solid var(--border); box-shadow:0 -2px 12px rgba(15,23,42,.06); padding-bottom:var(--safe-b); z-index:700; }
-.mnb { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:6px 4px; background:none; border:none; cursor:pointer; color:var(--text3); font-family:var(--fp); transition:color var(--dur-fast); -webkit-tap-highlight-color:transparent; outline:none; }
+.mob-nav {
+  display:none; grid-area:mnav; background:var(--surface);
+  backdrop-filter:blur(12px) saturate(1.4); -webkit-backdrop-filter:blur(12px) saturate(1.4);
+  border-top:1px solid var(--border); box-shadow:0 -2px 12px rgba(15,23,42,.06);
+  padding-bottom:var(--safe-b); z-index:700;
+}
+.mnb {
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:3px; padding:6px 4px; background:none; border:none; cursor:pointer;
+  color:var(--text3); font-family:var(--fp); outline:none;
+  transition:color var(--dur-fast); -webkit-tap-highlight-color:transparent;
+}
 .mnb:focus-visible { color:var(--primary); box-shadow:inset 0 0 0 1.5px var(--primary-m); border-radius:8px; }
 .mnb.on { color:var(--primary); }
 .mnb-ico { font-size:18px; line-height:1; }
 .mnb-lbl { font-size:9px; font-weight:600; letter-spacing:.04em; }
 
 /* ── DEV CARD ── */
-.dev-btn { position:fixed; bottom:calc(52px + var(--safe-b)); right:calc(14px + var(--safe-r)); z-index:5000; width:34px; height:34px; border-radius:50%; background:var(--surface); border:1.5px solid var(--border-md); box-shadow:var(--shadow); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background var(--dur-fast),color var(--dur-fast),border-color var(--dur-fast),box-shadow var(--dur-fast),transform var(--dur-spring); font-size:13px; font-weight:700; color:var(--text3); font-family:var(--fp); outline:none; }
-.dev-btn:hover,.dev-btn.open,.dev-btn:focus-visible { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:0 4px 16px rgba(37,99,235,.35); transform:scale(1.07); }
+.dev-btn {
+  position:fixed; bottom:calc(52px + var(--safe-b)); right:calc(14px + var(--safe-r));
+  z-index:5000; width:34px; height:34px; border-radius:50%;
+  background:var(--surface); border:1.5px solid var(--border-md); box-shadow:var(--shadow);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  font-size:13px; font-weight:700; color:var(--text3); font-family:var(--fp); outline:none;
+  transition:background var(--dur-fast),color var(--dur-fast),border-color var(--dur-fast),
+             box-shadow var(--dur-fast),transform var(--dur-spring);
+}
+.dev-btn:hover,.dev-btn.open,.dev-btn:focus-visible {
+  background:var(--primary); color:#fff; border-color:var(--primary);
+  box-shadow:0 4px 16px rgba(37,99,235,.35); transform:scale(1.07);
+}
 .dev-btn:active { transform:scale(.97); }
 .dev-btn:focus-visible { box-shadow:0 4px 16px rgba(37,99,235,.35),0 0 0 3px rgba(37,99,235,.3); }
-.dev-panel { position:fixed; bottom:calc(98px + var(--safe-b)); right:calc(14px + var(--safe-r)); z-index:4999; width:260px; background:var(--surface); border:1px solid var(--border-md); border-radius:16px; box-shadow:var(--shadow-lg); transform:scale(.88) translateY(12px); transform-origin:bottom right; opacity:0; pointer-events:none; transition:opacity var(--dur-spring) var(--ease-out),transform var(--dur-spring) var(--ease-spring); }
+.dev-panel {
+  position:fixed; bottom:calc(98px + var(--safe-b)); right:calc(14px + var(--safe-r));
+  z-index:4999; width:260px; background:var(--surface);
+  border:1px solid var(--border-md); border-radius:16px; box-shadow:var(--shadow-lg);
+  transform:scale(.88) translateY(12px); transform-origin:bottom right;
+  opacity:0; pointer-events:none;
+  transition:opacity var(--dur-spring) var(--ease-out),transform var(--dur-spring) var(--ease-spring);
+}
 .dev-panel.open { opacity:1; pointer-events:all; transform:scale(1) translateY(0); }
 .dev-top { padding:16px 16px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
 .dev-avatar { width:44px; height:44px; border-radius:12px; flex-shrink:0; background:linear-gradient(135deg,var(--primary),var(--purple)); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; color:#fff; }
-.dev-name { font-size:13px; font-weight:800; color:var(--text); line-height:1.2; }
-.dev-role { font-size:9px; font-weight:500; color:var(--text3); margin-top:2px; letter-spacing:.04em; }
+.dev-name  { font-size:13px; font-weight:800; color:var(--text); line-height:1.2; }
+.dev-role  { font-size:9px; font-weight:500; color:var(--text3); margin-top:2px; letter-spacing:.04em; }
 .dev-badge-row { display:flex; gap:5px; margin-top:5px; flex-wrap:wrap; }
 .dev-badge { font-size:7.5px; font-weight:600; padding:2px 7px; border-radius:6px; letter-spacing:.05em; }
 .dev-links { padding:12px 16px; display:flex; flex-direction:column; gap:2px; }
-.dev-link { display:flex; align-items:center; gap:9px; padding:7px 9px; border-radius:9px; text-decoration:none; color:var(--text2); transition:background var(--dur-fast),color var(--dur-fast); font-size:10px; font-weight:500; outline:none; }
+.dev-link  { display:flex; align-items:center; gap:9px; padding:7px 9px; border-radius:9px; text-decoration:none; color:var(--text2); font-size:10px; font-weight:500; outline:none; transition:background var(--dur-fast),color var(--dur-fast); }
 .dev-link:hover,.dev-link:focus-visible { background:var(--primary-l); color:var(--primary); }
 .dev-link:focus-visible { box-shadow:inset 0 0 0 1.5px var(--primary-m); }
 .dev-link-ico { width:26px; height:26px; border-radius:7px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; }
@@ -373,44 +478,61 @@ header {
 .dev-footer { padding:9px 16px; border-top:1px solid var(--border); font-size:8px; color:var(--text3); text-align:center; font-weight:500; letter-spacing:.04em; }
 
 /* ── LOADER ── */
-#loader { position:fixed; inset:0; z-index:9999; background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; transition:opacity var(--dur-slow) var(--ease-out); will-change:opacity; }
+#loader {
+  position:fixed; inset:0; z-index:9999; background:var(--surface);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:18px; transition:opacity var(--dur-slow) var(--ease-out); will-change:opacity;
+}
 #loader.fade { opacity:0; pointer-events:none; }
-.ld-hex { width:66px; height:66px; animation:hexspin 3s ease-in-out infinite; will-change:transform; }
+.ld-hex      { width:66px; height:66px; animation:hexspin 3s ease-in-out infinite; will-change:transform; }
 @keyframes hexspin { 0%,100%{transform:rotate(0deg) scale(1)}50%{transform:rotate(28deg) scale(1.06)} }
 .ld-wordmark { font-size:30px; font-weight:900; letter-spacing:.18em; color:var(--text); }
 .ld-wordmark em { color:var(--primary); font-style:normal; }
 .ld-bar-wrap { width:210px; height:2px; background:var(--surface3); border-radius:2px; overflow:hidden; }
-.ld-bar { height:100%; background:linear-gradient(90deg,var(--primary),var(--sky)); width:0; border-radius:2px; animation:ldbar 2.5s cubic-bezier(.4,0,.2,1) forwards; will-change:width; }
+.ld-bar      { height:100%; background:linear-gradient(90deg,var(--primary),var(--sky)); width:0; border-radius:2px; animation:ldbar 2.5s cubic-bezier(.4,0,.2,1) forwards; will-change:width; }
 @keyframes ldbar { 0%{width:0}100%{width:100%} }
-.ld-sub { font-size:9.5px; font-weight:600; letter-spacing:.38em; color:var(--text3); text-transform:uppercase; }
-.ld-status { font-size:9px; font-weight:500; letter-spacing:.10em; color:var(--text3); min-height:14px; text-align:center; max-width:260px; }
+.ld-sub    { font-size:9.5px; font-weight:600; letter-spacing:.38em; color:var(--text3); text-transform:uppercase; }
+.ld-status { font-size:9px; font-weight:500; letter-spacing:.10em; color:var(--text3); min-height:14px; text-align:center; max-width:280px; }
 
 /* ── UTILITIES ── */
 .empty { font-size:9.5px; color:var(--text3); padding:12px; text-align:center; }
-.err { font-size:9.5px; color:var(--red); padding:10px; text-align:center; background:var(--red-l); border-radius:8px; margin:6px; }
+.err   { font-size:9.5px; color:var(--red); padding:10px; text-align:center; background:var(--red-l); border-radius:8px; margin:6px; }
 @keyframes numflash { 0%{background:#dbeafe}100%{background:transparent} }
-.flash { animation:numflash var(--dur-slow) ease; border-radius:4px; }
+.flash  { animation:numflash var(--dur-slow) ease; border-radius:4px; }
+/* FIX 4: Screen-reader only utility — used on aria-live regions */
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 
-/* ── RESPONSIVE TABLET ── */
+/* ── RESPONSIVE — TABLET (600–899px) ── */
 @media (max-width:899px) and (min-width:600px) {
   .app { grid-template-rows:50px 1fr 32px; grid-template-columns:260px 1fr; grid-template-areas:"hdr hdr" "lft map" "tkr tkr"; }
-  .right-panel { display:none; } .pills { display:none; }
+  .right-panel { display:none; }
+  .pills { display:none; }
 }
 
-/* ── RESPONSIVE MOBILE ── */
+/* ── RESPONSIVE — MOBILE (<600px) ── */
 @media (max-width:599px) {
   .app { grid-template-rows:48px 1fr 30px 54px; grid-template-columns:1fr; grid-template-areas:"hdr" "map" "tkr" "mnav"; }
   .mob-nav { display:flex; }
-  .dev-btn { bottom:calc(62px + var(--safe-b)); }
-  .dev-panel { bottom:calc(106px + var(--safe-b)); }
+  .dev-btn    { bottom:calc(62px + var(--safe-b)); }
+  .dev-panel  { bottom:calc(106px + var(--safe-b)); }
   .pills,.h-sep.hdr-sep { display:none; }
   .clock-date { display:none; }
   .clock-time { font-size:11px; letter-spacing:.05em; }
   .threat-chip { padding:4px 8px; }
   .threat-chip .tc-label { display:none; }
-  .left-panel,.right-panel { grid-area:unset; position:fixed; top:48px; left:0; right:0; bottom:calc(82px + var(--safe-b)); z-index:650; border:none; border-top:1px solid var(--border); background:var(--bg); transform:translateX(100%); visibility:hidden; transition:transform var(--dur-med) var(--ease-out),visibility 0s linear var(--dur-med); will-change:transform; overflow-y:auto; -webkit-overflow-scrolling:touch; }
-  .left-panel.mob-show,.right-panel.mob-show { transform:translateX(0); visibility:visible; transition:transform var(--dur-med) var(--ease-out),visibility 0s linear 0s; }
+  .left-panel,.right-panel {
+    grid-area:unset; position:fixed; top:48px; left:0; right:0;
+    bottom:calc(82px + var(--safe-b)); z-index:650; border:none;
+    border-top:1px solid var(--border); background:var(--bg);
+    transform:translateX(100%); visibility:hidden; overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    transition:transform var(--dur-med) var(--ease-out),visibility 0s linear var(--dur-med);
+    will-change:transform;
+  }
+  .left-panel.mob-show,.right-panel.mob-show {
+    transform:translateX(0); visibility:visible;
+    transition:transform var(--dur-med) var(--ease-out),visibility 0s linear 0s;
+  }
   #map-wrap { grid-area:map; }
   .map-toolbar { gap:3px; }
   .map-btn { padding:7px 10px; font-size:9px; gap:4px; }
@@ -423,84 +545,127 @@ header {
   .mc { opacity:.2; }
   .tkr-lbl { display:none; }
   .tkr-badge { padding:0 8px; }
-  .tkr-item { padding:0 14px; font-size:9.5px; }
+  .tkr-item  { padding:0 14px; font-size:9.5px; }
 }
 @media (max-width:374px) { .map-btn { padding:6px 7px; } .ms { padding:3px 8px; } }
 </style>
 </head>
 <body>
 
-<!-- LOADER ─────────────────────────────────────────── -->
-<div id="loader">
-  <svg class="ld-hex" viewBox="0 0 66 66" fill="none">
+<!-- ═══ LOADER ═══════════════════════════════════════════ -->
+<div id="loader" role="status" aria-live="polite" aria-label="Loading BACKSTAX">
+  <svg class="ld-hex" viewBox="0 0 66 66" fill="none" aria-hidden="true">
     <polygon points="33,3 61,18 61,48 33,63 5,48 5,18" fill="none" stroke="#2563eb" stroke-width="1.8"/>
     <polygon points="33,13 53,24 53,42 33,53 13,42 13,24" fill="none" stroke="#2563eb" stroke-width="1" opacity=".4"/>
     <circle cx="33" cy="33" r="6" fill="#2563eb" opacity=".9"/>
     <circle cx="33" cy="33" r="12" fill="none" stroke="#2563eb" stroke-width=".8" opacity=".25"/>
   </svg>
-  <div class="ld-wordmark">BACK<em>STAX</em></div>
-  <div class="ld-bar-wrap"><div class="ld-bar"></div></div>
-  <div class="ld-sub">World Monitor</div>
+  <div class="ld-wordmark" aria-hidden="true">BACK<em>STAX</em></div>
+  <div class="ld-bar-wrap" aria-hidden="true"><div class="ld-bar"></div></div>
+  <div class="ld-sub" aria-hidden="true">World Monitor</div>
+  <!-- FIX 6: Status messages updated by data-engine loader events -->
   <div class="ld-status" id="ldStatus">Connecting to intelligence streams…</div>
+  <span class="sr-only">Loading world intelligence data</span>
 </div>
 
-<!-- APP ─────────────────────────────────────────────── -->
+<!-- ═══ APP ═══════════════════════════════════════════════ -->
 <div class="app" id="appRoot">
 
-<!-- HEADER ─────────────────────────────────────────── -->
+<!-- ─── HEADER ──────────────────────────────────────────── -->
 <header>
-  <div class="logo">
-    <svg class="logo-mark" viewBox="0 0 28 28" fill="none">
+  <div class="logo" aria-label="BACKSTAX World Monitor">
+    <svg class="logo-mark" viewBox="0 0 28 28" fill="none" aria-hidden="true">
       <polygon points="14,2 25,8 25,20 14,26 3,20 3,8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
       <polygon points="14,8 21,12 21,18 14,22 7,18 7,12" fill="#dbeafe" stroke="#2563eb" stroke-width=".8" opacity=".65"/>
       <circle cx="14" cy="14" r="3.2" fill="#2563eb"/>
     </svg>
     <div class="logo-text">BACK<em>STAX</em></div>
   </div>
-  <div class="h-sep hdr-sep"></div>
-  <div class="pills">
-    <div class="pill p-live"><span class="dot"></span>LIVE</div>
-    <div class="pill p-info" id="pQuake"><span class="dot"></span>SEISMIC <span id="pQCount">—</span></div>
-    <div class="pill p-warn" id="pEvent"><span class="dot"></span>EVENTS <span id="pECount">—</span></div>
-    <div class="pill p-crit" id="pConflict"><span class="dot"></span>CONFLICT ZONES</div>
-    <div class="pill p-live" id="pISS"><span class="dot"></span>ISS ●</div>
-    <div class="pill p-info" id="pNews"><span class="dot"></span>INTEL <span id="pNCount">—</span></div>
+
+  <div class="h-sep hdr-sep" aria-hidden="true"></div>
+
+  <!-- Status pills -->
+  <div class="pills" role="status" aria-label="Live data stream status" aria-live="polite">
+    <div class="pill p-live"><span class="dot" aria-hidden="true"></span>LIVE</div>
+    <div class="pill p-info" id="pQuake">
+      <span class="dot" aria-hidden="true"></span>SEISMIC <span id="pQCount">—</span>
+    </div>
+    <div class="pill p-warn" id="pEvent">
+      <span class="dot" aria-hidden="true"></span>EVENTS <span id="pECount">—</span>
+    </div>
+    <!-- FIX 3: pConflict pill — ui-controller updates conflict count from bx:geopolitical -->
+    <div class="pill p-crit" id="pConflict">
+      <span class="dot" aria-hidden="true"></span>CONFLICTS <span id="pConflictCount">16</span>
+    </div>
+    <div class="pill p-live" id="pISS">
+      <span class="dot" aria-hidden="true"></span>ISS ●
+    </div>
+    <div class="pill p-info" id="pNews">
+      <span class="dot" aria-hidden="true"></span>INTEL <span id="pNCount">—</span>
+    </div>
   </div>
+
   <div class="hdr-right">
-    <div class="threat-chip" id="threatChip">
-      <div class="tc-dot" id="threatDot"></div>
+    <div class="threat-chip" id="threatChip" title="Global Composite Threat Score">
+      <div class="tc-dot" id="threatDot" aria-hidden="true"></div>
       <span id="threatLabel" class="tc-label">LOADING</span>
     </div>
-    <div class="h-sep"></div>
-    <div class="clock">
-      <div class="clock-time" id="clockTime">—:—:— UTC</div>
+    <div class="h-sep" aria-hidden="true"></div>
+    <div class="clock" aria-label="UTC time">
+      <div class="clock-time" id="clockTime" aria-live="off">—:—:— UTC</div>
       <div class="clock-date" id="clockDate">—</div>
     </div>
   </div>
 </header>
 
-<!-- LEFT PANEL ─────────────────────────────────────── -->
-<aside class="left-panel" id="leftPanel">
+<!-- ─── LEFT PANEL ───────────────────────────────────────── -->
+<aside class="left-panel" id="leftPanel" aria-label="Market and tracking data">
 
-  <!-- Markets -->
+  <!-- Markets / Crypto -->
   <div class="card">
     <div class="card-hdr">
       <div class="card-title">Markets</div>
       <div class="badge b-green">CRYPTOCOMPARE</div>
-      <button class="icon-btn" onclick="DataEngine.fetchCrypto()" title="Refresh markets">↻</button>
+      <button class="icon-btn" onclick="DataEngine.fetchCrypto()" title="Refresh markets" aria-label="Refresh market data">↻</button>
     </div>
     <div style="padding:4px">
-      <div class="cr-list" id="cryptoList">
-        <div class="cr"><div class="cr-icon" style="background:#fff7ed;color:#ea580c">₿</div><div class="cr-info"><div class="cr-sym">BTC</div><div class="cr-name">Bitcoin</div></div><canvas class="cr-spark" id="spkBTC" width="52" height="26"></canvas><div class="cr-right"><div class="cr-price" id="pBTC">$—</div><div class="cr-chg" id="cBTC">—</div></div></div>
-        <div class="cr"><div class="cr-icon" style="background:#f5f3ff;color:#7c3aed">Ξ</div><div class="cr-info"><div class="cr-sym">ETH</div><div class="cr-name">Ethereum</div></div><canvas class="cr-spark" id="spkETH" width="52" height="26"></canvas><div class="cr-right"><div class="cr-price" id="pETH">$—</div><div class="cr-chg" id="cETH">—</div></div></div>
-        <div class="cr"><div class="cr-icon" style="background:#ecfdf5;color:#059669">◎</div><div class="cr-info"><div class="cr-sym">SOL</div><div class="cr-name">Solana</div></div><canvas class="cr-spark" id="spkSOL" width="52" height="26"></canvas><div class="cr-right"><div class="cr-price" id="pSOL">$—</div><div class="cr-chg" id="cSOL">—</div></div></div>
-        <div class="cr"><div class="cr-icon" style="background:#fffbeb;color:#d97706">◈</div><div class="cr-info"><div class="cr-sym">BNB</div><div class="cr-name">BNB Chain</div></div><canvas class="cr-spark" id="spkBNB" width="52" height="26"></canvas><div class="cr-right"><div class="cr-price" id="pBNB">$—</div><div class="cr-chg" id="cBNB">—</div></div></div>
-        <div class="cr"><div class="cr-icon" style="background:#f0f9ff;color:#0284c7">✕</div><div class="cr-info"><div class="cr-sym">XRP</div><div class="cr-name">Ripple</div></div><canvas class="cr-spark" id="spkXRP" width="52" height="26"></canvas><div class="cr-right"><div class="cr-price" id="pXRP">$—</div><div class="cr-chg" id="cXRP">—</div></div></div>
+      <!-- FIX 5: tabindex="0" + role="button" on .cr rows for keyboard nav -->
+      <div class="cr-list" id="cryptoList" role="list">
+        <div class="cr" role="listitem" tabindex="0" aria-label="Bitcoin price">
+          <div class="cr-icon" style="background:#fff7ed;color:#ea580c" aria-hidden="true">₿</div>
+          <div class="cr-info"><div class="cr-sym">BTC</div><div class="cr-name">Bitcoin</div></div>
+          <canvas class="cr-spark" id="spkBTC" width="52" height="26" aria-hidden="true"></canvas>
+          <div class="cr-right"><div class="cr-price" id="pBTC">$—</div><div class="cr-chg" id="cBTC">—</div></div>
+        </div>
+        <div class="cr" role="listitem" tabindex="0" aria-label="Ethereum price">
+          <div class="cr-icon" style="background:#f5f3ff;color:#7c3aed" aria-hidden="true">Ξ</div>
+          <div class="cr-info"><div class="cr-sym">ETH</div><div class="cr-name">Ethereum</div></div>
+          <canvas class="cr-spark" id="spkETH" width="52" height="26" aria-hidden="true"></canvas>
+          <div class="cr-right"><div class="cr-price" id="pETH">$—</div><div class="cr-chg" id="cETH">—</div></div>
+        </div>
+        <div class="cr" role="listitem" tabindex="0" aria-label="Solana price">
+          <div class="cr-icon" style="background:#ecfdf5;color:#059669" aria-hidden="true">◎</div>
+          <div class="cr-info"><div class="cr-sym">SOL</div><div class="cr-name">Solana</div></div>
+          <canvas class="cr-spark" id="spkSOL" width="52" height="26" aria-hidden="true"></canvas>
+          <div class="cr-right"><div class="cr-price" id="pSOL">$—</div><div class="cr-chg" id="cSOL">—</div></div>
+        </div>
+        <div class="cr" role="listitem" tabindex="0" aria-label="BNB price">
+          <div class="cr-icon" style="background:#fffbeb;color:#d97706" aria-hidden="true">◈</div>
+          <div class="cr-info"><div class="cr-sym">BNB</div><div class="cr-name">BNB Chain</div></div>
+          <canvas class="cr-spark" id="spkBNB" width="52" height="26" aria-hidden="true"></canvas>
+          <div class="cr-right"><div class="cr-price" id="pBNB">$—</div><div class="cr-chg" id="cBNB">—</div></div>
+        </div>
+        <div class="cr" role="listitem" tabindex="0" aria-label="XRP price">
+          <div class="cr-icon" style="background:#f0f9ff;color:#0284c7" aria-hidden="true">✕</div>
+          <div class="cr-info"><div class="cr-sym">XRP</div><div class="cr-name">Ripple</div></div>
+          <canvas class="cr-spark" id="spkXRP" width="52" height="26" aria-hidden="true"></canvas>
+          <div class="cr-right"><div class="cr-price" id="pXRP">$—</div><div class="cr-chg" id="cXRP">—</div></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Geopolitical Intelligence (replaces COVID) -->
+  <!-- Geopolitical Intelligence (replaces COVID panel) -->
   <div class="card">
     <div class="card-hdr">
       <div class="card-title">Geopolitical Intel</div>
@@ -526,16 +691,22 @@ header {
         </div>
       </div>
     </div>
-    <!-- Top conflict list -->
+    <!-- Top conflicts list — FIX 4: aria-live for dynamic updates -->
     <div style="padding:4px 4px 8px">
-      <div style="padding:0 9px 4px;font-size:7.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)">TOP ACTIVE CONFLICTS</div>
-      <div id="geoConflictList">
-        <div class="card-body"><div class="skel skel-line w85"></div><div class="skel skel-line w70"></div><div class="skel skel-line w85"></div></div>
+      <div style="padding:0 9px 4px;font-size:7.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)">
+        TOP ACTIVE CONFLICTS
+      </div>
+      <div id="geoConflictList" aria-live="polite" aria-label="Top active conflict zones">
+        <div class="card-body">
+          <div class="skel skel-line w85"></div>
+          <div class="skel skel-line w70"></div>
+          <div class="skel skel-line w85"></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- ISS -->
+  <!-- ISS Tracker -->
   <div class="card">
     <div class="card-hdr">
       <div class="card-title">ISS Tracker</div>
@@ -543,66 +714,92 @@ header {
     </div>
     <div class="card-body">
       <div class="iss-card">
-        <div class="iss-vis">🛸<div class="iss-orbit"></div></div>
+        <div class="iss-vis" aria-hidden="true">🛸<div class="iss-orbit"></div></div>
         <div class="iss-data">
-          <div class="iss-coords" id="issCoords">Acquiring lock…</div>
+          <div class="iss-coords" id="issCoords" aria-live="polite" aria-label="ISS coordinates">Acquiring lock…</div>
           <div class="iss-sub" id="issSub">Alt: — km · Vel: — km/h</div>
-          <div class="iss-live"><div class="iss-dot"></div><div class="iss-ltxt">TRACKING LIVE</div></div>
+          <div class="iss-live" aria-hidden="true"><div class="iss-dot"></div><div class="iss-ltxt">TRACKING LIVE</div></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- City Weather -->
+  <!-- City Intelligence / Weather -->
   <div class="card">
     <div class="card-hdr">
       <div class="card-title">City Intelligence</div>
       <div class="badge b-sky">8 CITIES</div>
     </div>
     <div style="padding:4px">
-      <div id="wxPanel">
-        <div class="card-body"><div class="skel skel-line w85"></div><div class="skel skel-line w70"></div><div class="skel skel-line w85"></div><div class="skel skel-line w70"></div></div>
+      <!-- FIX 4: aria-live on dynamic weather panel -->
+      <div id="wxPanel" aria-live="polite" aria-label="City weather data">
+        <div class="card-body">
+          <div class="skel skel-line w85"></div>
+          <div class="skel skel-line w70"></div>
+          <div class="skel skel-line w85"></div>
+          <div class="skel skel-line w70"></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Seismic -->
+  <!-- Seismic Alerts -->
   <div class="card">
     <div class="card-hdr">
       <div class="card-title">Seismic Alerts</div>
       <div class="badge b-red">USGS LIVE</div>
-      <button class="icon-btn" onclick="DataEngine.fetchEarthquakes()" title="Refresh seismic">↻</button>
+      <button class="icon-btn" onclick="DataEngine.fetchEarthquakes()" title="Refresh seismic data" aria-label="Refresh earthquake data">↻</button>
     </div>
     <div style="padding:4px">
-      <div class="ev-list" id="quakeList">
-        <div class="card-body"><div class="skel skel-block"></div><div class="skel skel-block"></div><div class="skel skel-block"></div></div>
+      <!-- FIX 4: aria-live on seismic list -->
+      <div class="ev-list" id="quakeList" aria-live="polite" aria-label="Recent earthquakes">
+        <div class="card-body">
+          <div class="skel skel-block"></div>
+          <div class="skel skel-block"></div>
+          <div class="skel skel-block"></div>
+        </div>
       </div>
     </div>
   </div>
 
 </aside>
 
-<!-- MAP ─────────────────────────────────────────────── -->
-<main id="map-wrap">
-  <div class="mc mc-tl"></div>
-  <div class="mc mc-tr"></div>
-  <div class="mc mc-bl"></div>
-  <div class="mc mc-br"></div>
+<!-- ─── MAP ──────────────────────────────────────────────── -->
+<main id="map-wrap" aria-label="World intelligence map">
+  <!-- Corner brackets -->
+  <div class="mc mc-tl" aria-hidden="true"></div>
+  <div class="mc mc-tr" aria-hidden="true"></div>
+  <div class="mc mc-bl" aria-hidden="true"></div>
+  <div class="mc mc-br" aria-hidden="true"></div>
 
-  <div class="map-toolbar">
-    <button class="map-btn on" id="btnQ" onclick="MapRenderer.toggleLayer('q',this)"><span class="mb-dot"></span><span>Seismic</span></button>
-    <button class="map-btn on" id="btnE" onclick="MapRenderer.toggleLayer('e',this)"><span class="mb-dot"></span><span>Events</span></button>
-    <button class="map-btn on" id="btnI" onclick="MapRenderer.toggleLayer('i',this)"><span class="mb-dot"></span><span>ISS</span></button>
-    <button class="map-btn on" id="btnN" onclick="MapRenderer.toggleLayer('n',this)"><span class="mb-dot"></span><span>Intel</span></button>
+  <!-- Map layer toolbar -->
+  <div class="map-toolbar" role="toolbar" aria-label="Map layer controls">
+    <button class="map-btn on" id="btnQ" onclick="MapRenderer.toggleLayer('q',this)" aria-pressed="true" aria-label="Toggle seismic markers">
+      <span class="mb-dot" aria-hidden="true"></span><span>Seismic</span>
+    </button>
+    <button class="map-btn on" id="btnE" onclick="MapRenderer.toggleLayer('e',this)" aria-pressed="true" aria-label="Toggle earth events">
+      <span class="mb-dot" aria-hidden="true"></span><span>Events</span>
+    </button>
+    <button class="map-btn on" id="btnI" onclick="MapRenderer.toggleLayer('i',this)" aria-pressed="true" aria-label="Toggle ISS tracker">
+      <span class="mb-dot" aria-hidden="true"></span><span>ISS</span>
+    </button>
+    <button class="map-btn on" id="btnN" onclick="MapRenderer.toggleLayer('n',this)" aria-pressed="true" aria-label="Toggle intelligence news pins">
+      <span class="mb-dot" aria-hidden="true"></span><span>Intel</span>
+    </button>
+    <!-- FIX 1: Conflict zones layer toggle — was missing, now present -->
+    <button class="map-btn on" id="btnC" onclick="MapRenderer.toggleLayer('c',this)" aria-pressed="true" aria-label="Toggle conflict zone overlays">
+      <span class="mb-dot" aria-hidden="true"></span><span>Zones</span>
+    </button>
   </div>
 
   <div id="map"></div>
 
-  <div class="map-legend">
+  <!-- Map legend -->
+  <div class="map-legend" aria-hidden="true">
     <div class="ml-title">Layers</div>
     <div class="ml-section">Geopolitical</div>
     <div class="ml-row"><div class="ml-circle" style="color:#dc2626"></div>Active conflict zone</div>
-    <div class="ml-row"><div class="ml-circle" style="color:#d97706;border-style:dashed"></div>Elevated tension zone</div>
+    <div class="ml-row"><div class="ml-circle" style="color:#d97706;border-style:dashed"></div>Elevated tension</div>
     <div class="ml-section">Intelligence</div>
     <div class="ml-row"><div class="ml-dot" style="background:#dc2626"></div>War / Conflict</div>
     <div class="ml-row"><div class="ml-dot" style="background:#7f1d1d"></div>Terrorism</div>
@@ -616,7 +813,8 @@ header {
     <div class="ml-row"><div class="ml-dot" style="background:#059669"></div>ISS Position</div>
   </div>
 
-  <div class="map-stats">
+  <!-- Map bottom stats -->
+  <div class="map-stats" aria-label="Map statistics" aria-live="polite">
     <div class="ms"><span class="ms-val" id="msQ">—</span><span class="ms-lbl">Seismic</span></div>
     <div class="ms"><span class="ms-val" id="msE">—</span><span class="ms-lbl">Events</span></div>
     <div class="ms"><span class="ms-val" id="msPins">—</span><span class="ms-lbl">Intel Pins</span></div>
@@ -624,21 +822,22 @@ header {
   </div>
 </main>
 
-<!-- RIGHT PANEL ─────────────────────────────────────── -->
-<aside class="right-panel" id="rightPanel">
+<!-- ─── RIGHT PANEL ──────────────────────────────────────── -->
+<aside class="right-panel" id="rightPanel" aria-label="World intelligence feed">
 
-  <!-- World Intel Feed -->
+  <!-- World Intel News Feed -->
   <div class="card">
     <div class="card-hdr">
       <div class="card-title">World Intel</div>
       <div class="badge b-blue">LIVE RSS</div>
-      <button class="icon-btn" onclick="DataEngine.fetchNews()" title="Refresh news">↻</button>
+      <button class="icon-btn" onclick="DataEngine.fetchNews()" title="Refresh news" aria-label="Refresh news feed">↻</button>
     </div>
-    <div class="news-tabs">
-      <button class="ntab on" onclick="showNewsTab('bbc',this)">BBC World</button>
-      <button class="ntab" onclick="showNewsTab('guardian',this)">Guardian</button>
+    <div class="news-tabs" role="tablist" aria-label="News sources">
+      <button class="ntab on" onclick="showNewsTab('bbc',this)" role="tab" aria-selected="true">BBC World</button>
+      <button class="ntab"    onclick="showNewsTab('guardian',this)" role="tab" aria-selected="false">Guardian</button>
     </div>
-    <div class="news-list" id="newsFeed">
+    <!-- FIX 4: aria-live on news feed -->
+    <div class="news-list" id="newsFeed" aria-live="polite" aria-label="Latest world headlines">
       <div class="card-body" style="padding:12px 13px">
         <div class="skel skel-line w50" style="margin-bottom:4px"></div>
         <div class="skel skel-line w85"></div>
@@ -649,47 +848,67 @@ header {
     </div>
   </div>
 
-  <!-- Earth Events -->
+  <!-- Earth Events (NASA EONET) -->
   <div class="card">
     <div class="card-hdr">
       <div class="card-title">Earth Events</div>
       <div class="badge b-amber">NASA EONET</div>
-      <button class="icon-btn" onclick="DataEngine.fetchEarthEvents()" title="Refresh events">↻</button>
+      <button class="icon-btn" onclick="DataEngine.fetchEarthEvents()" title="Refresh earth events" aria-label="Refresh earth events">↻</button>
     </div>
     <div style="padding:4px">
-      <div class="ev-list" id="earthList">
-        <div class="card-body"><div class="skel skel-block"></div><div class="skel skel-block"></div><div class="skel skel-block"></div></div>
+      <!-- FIX 4: aria-live on earth events -->
+      <div class="ev-list" id="earthList" aria-live="polite" aria-label="Active earth events">
+        <div class="card-body">
+          <div class="skel skel-block"></div>
+          <div class="skel skel-block"></div>
+          <div class="skel skel-block"></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Global Pulse -->
+  <!-- Global Pulse + Threat Score -->
   <div class="card">
     <div class="card-hdr"><div class="card-title">Global Pulse</div></div>
-    <div class="pulse-wrap">
+
+    <!-- 4 live pulse bars — geopolitical dimension added -->
+    <div class="pulse-wrap" aria-label="Global activity indicators" aria-live="polite">
       <div class="pulse-row">
-        <div class="pulse-hdr"><span class="pulse-lbl">Seismic Activity</span><span class="pulse-val" id="seisVal" style="color:var(--text3)">—</span></div>
+        <div class="pulse-hdr">
+          <span class="pulse-lbl">Seismic Activity</span>
+          <span class="pulse-val" id="seisVal" style="color:var(--text3)">—</span>
+        </div>
         <div class="pulse-track"><div class="pulse-fill" id="seisBar" style="width:0;background:var(--green)"></div></div>
       </div>
       <div class="pulse-row">
-        <div class="pulse-hdr"><span class="pulse-lbl">Natural Events</span><span class="pulse-val" id="evVal" style="color:var(--text3)">—</span></div>
+        <div class="pulse-hdr">
+          <span class="pulse-lbl">Natural Events</span>
+          <span class="pulse-val" id="evVal" style="color:var(--text3)">—</span>
+        </div>
         <div class="pulse-track"><div class="pulse-fill" id="evBar" style="width:0;background:var(--green)"></div></div>
       </div>
       <div class="pulse-row">
-        <div class="pulse-hdr"><span class="pulse-lbl">Market Volatility</span><span class="pulse-val" id="mktVal" style="color:var(--text3)">—</span></div>
+        <div class="pulse-hdr">
+          <span class="pulse-lbl">Market Volatility</span>
+          <span class="pulse-val" id="mktVal" style="color:var(--text3)">—</span>
+        </div>
         <div class="pulse-track"><div class="pulse-fill" id="mktBar" style="width:0;background:var(--green)"></div></div>
       </div>
       <div class="pulse-row">
-        <div class="pulse-hdr"><span class="pulse-lbl">Geopolitical Tension</span><span class="pulse-val" id="geoVal" style="color:var(--text3)">—</span></div>
+        <div class="pulse-hdr">
+          <span class="pulse-lbl">Geopolitical Tension</span>
+          <span class="pulse-val" id="geoVal" style="color:var(--text3)">—</span>
+        </div>
         <div class="pulse-track"><div class="pulse-fill" id="geoBar" style="width:0;background:var(--green)"></div></div>
       </div>
     </div>
 
+    <!-- Composite threat ring — 4-dimension weighted score -->
     <div class="threat-block">
       <div class="threat-hdr">Composite Threat Score</div>
       <div class="threat-row">
-        <div class="ring-wrap">
-          <canvas id="threatRing" width="60" height="60"></canvas>
+        <div class="ring-wrap" aria-label="Threat score ring">
+          <canvas id="threatRing" width="60" height="60" aria-hidden="true"></canvas>
           <div class="ring-num">
             <span class="ring-num-val" id="threatNum">—</span>
             <span class="ring-num-sub">/100</span>
@@ -697,49 +916,80 @@ header {
         </div>
         <div class="threat-info">
           <div class="threat-status" id="threatStatus" style="color:var(--text3)">—</div>
-          <div class="threat-desc" id="threatDesc">Aggregating live data…</div>
+          <div class="threat-desc"   id="threatDesc">Aggregating live data…</div>
         </div>
       </div>
-      <div class="threat-factors">
-        <div class="tf"><div class="tf-dot" style="background:var(--red)"></div><span class="tf-lbl">Seismic (M5+)</span><span class="tf-val" id="tfQ">—</span></div>
-        <div class="tf"><div class="tf-dot" style="background:var(--amber)"></div><span class="tf-lbl">Active Events</span><span class="tf-val" id="tfE">—</span></div>
-        <div class="tf"><div class="tf-dot" style="background:var(--primary)"></div><span class="tf-lbl">Market Volatility</span><span class="tf-val" id="tfM">—</span></div>
-        <div class="tf"><div class="tf-dot" style="background:var(--red)"></div><span class="tf-lbl">Geopolitical</span><span class="tf-val" id="tfGeo">—</span></div>
+
+      <!-- All 4 threat factors — FIX: tfGeo id confirmed (not tfG) -->
+      <div class="threat-factors" aria-label="Threat factor breakdown">
+        <div class="tf">
+          <div class="tf-dot" style="background:var(--red)"></div>
+          <span class="tf-lbl">Seismic (M5+)</span>
+          <span class="tf-val" id="tfQ">—</span>
+        </div>
+        <div class="tf">
+          <div class="tf-dot" style="background:var(--amber)"></div>
+          <span class="tf-lbl">Active Events</span>
+          <span class="tf-val" id="tfE">—</span>
+        </div>
+        <div class="tf">
+          <div class="tf-dot" style="background:var(--primary)"></div>
+          <span class="tf-lbl">Market Volatility</span>
+          <span class="tf-val" id="tfM">—</span>
+        </div>
+        <!-- FIX: id="tfGeo" (ui-controller uses this exact ID) -->
+        <div class="tf">
+          <div class="tf-dot" style="background:var(--red)"></div>
+          <span class="tf-lbl">Geopolitical</span>
+          <span class="tf-val" id="tfGeo">—</span>
+        </div>
       </div>
     </div>
   </div>
 
 </aside>
 
-<!-- TICKER ──────────────────────────────────────────── -->
-<footer class="ticker">
-  <div class="tkr-badge">
+<!-- ─── TICKER ────────────────────────────────────────────── -->
+<footer class="ticker" aria-label="Live news ticker">
+  <div class="tkr-badge" aria-hidden="true">
     <div class="tkr-dot"></div>
     <div class="tkr-lbl">Live</div>
   </div>
   <div class="tkr-track">
-    <div class="tkr-inner" id="tkrInner">
+    <div class="tkr-inner" id="tkrInner" aria-live="off">
       <div class="tkr-item">BACKSTAX WORLD MONITOR — INITIALIZING INTELLIGENCE STREAMS</div>
-      <div class="tkr-item">CONNECTING TO GLOBAL DATA SOURCES</div>
+      <div class="tkr-item">GEO-INTELLIGENCE ENGINE ACTIVE · 200+ ENTITIES · 16 CONFLICT ZONES</div>
       <div class="tkr-item">BACKSTAX WORLD MONITOR — INITIALIZING INTELLIGENCE STREAMS</div>
-      <div class="tkr-item">CONNECTING TO GLOBAL DATA SOURCES</div>
+      <div class="tkr-item">GEO-INTELLIGENCE ENGINE ACTIVE · 200+ ENTITIES · 16 CONFLICT ZONES</div>
     </div>
   </div>
 </footer>
 
-<!-- MOBILE NAV ──────────────────────────────────────── -->
-<nav class="mob-nav" id="mobNav">
-  <button class="mnb on"  id="mnbMap"   onclick="mobTab('map',this)">  <div class="mnb-ico">🗺</div>  <div class="mnb-lbl">Map</div>   </button>
-  <button class="mnb"     id="mnbLeft"  onclick="mobTab('left',this)"> <div class="mnb-ico">📊</div>  <div class="mnb-lbl">Markets</div></button>
-  <button class="mnb"     id="mnbRight" onclick="mobTab('right',this)"><div class="mnb-ico">📡</div>  <div class="mnb-lbl">Intel</div>  </button>
+<!-- ─── MOBILE NAV ────────────────────────────────────────── -->
+<nav class="mob-nav" id="mobNav" aria-label="Mobile navigation">
+  <button class="mnb on" id="mnbMap"   onclick="mobTab('map',this)"   aria-label="Show map">
+    <div class="mnb-ico" aria-hidden="true">🗺</div>
+    <div class="mnb-lbl">Map</div>
+  </button>
+  <button class="mnb" id="mnbLeft"  onclick="mobTab('left',this)"  aria-label="Show markets and tracking">
+    <div class="mnb-ico" aria-hidden="true">📊</div>
+    <div class="mnb-lbl">Markets</div>
+  </button>
+  <button class="mnb" id="mnbRight" onclick="mobTab('right',this)" aria-label="Show world intelligence">
+    <div class="mnb-ico" aria-hidden="true">📡</div>
+    <div class="mnb-lbl">Intel</div>
+  </button>
 </nav>
 </div><!-- /app -->
 
-<!-- DEV CARD ────────────────────────────────────────── -->
-<button class="dev-btn" id="devBtn" onclick="toggleDev()" title="About the Developer" aria-label="Developer info">?</button>
-<div class="dev-panel" id="devPanel" role="dialog" aria-label="Developer information">
+<!-- ─── DEV CARD ──────────────────────────────────────────── -->
+<button class="dev-btn" id="devBtn" onclick="toggleDev()"
+  title="About the Developer" aria-label="Developer information" aria-expanded="false">?</button>
+
+<div class="dev-panel" id="devPanel"
+  role="dialog" aria-label="Developer information" aria-modal="true">
   <div class="dev-top">
-    <div class="dev-avatar">AS</div>
+    <div class="dev-avatar" aria-hidden="true">AS</div>
     <div>
       <div class="dev-name">Abhishek Shah</div>
       <div class="dev-role">DESIGNER · DEVELOPER · BUILDER</div>
@@ -751,30 +1001,30 @@ header {
     </div>
   </div>
   <div class="dev-links">
-    <a class="dev-link" href="https://linkedin.com/in/theabhishekshah" target="_blank" rel="noopener noreferrer">
-      <div class="dev-link-ico" style="background:#e8f0fe">🔗</div>
+    <a class="dev-link" href="https://linkedin.com/in/theabhishekshah" target="_blank" rel="noopener noreferrer" aria-label="Abhishek Shah on LinkedIn">
+      <div class="dev-link-ico" style="background:#e8f0fe" aria-hidden="true">🔗</div>
       <div><div style="font-weight:600">LinkedIn</div><span class="dev-link-url">linkedin.com/in/theabhishekshah</span></div>
     </a>
-    <a class="dev-link" href="https://github.com/abhiverse01" target="_blank" rel="noopener noreferrer">
-      <div class="dev-link-ico" style="background:#f6f8fa">🐙</div>
+    <a class="dev-link" href="https://github.com/abhiverse01" target="_blank" rel="noopener noreferrer" aria-label="Abhishek Shah on GitHub">
+      <div class="dev-link-ico" style="background:#f6f8fa" aria-hidden="true">🐙</div>
       <div><div style="font-weight:600">GitHub</div><span class="dev-link-url">github.com/abhiverse01</span></div>
     </a>
-    <a class="dev-link" href="https://abhishekshah.vercel.app" target="_blank" rel="noopener noreferrer">
-      <div class="dev-link-ico" style="background:var(--primary-l)">🌐</div>
+    <a class="dev-link" href="https://abhishekshah.vercel.app" target="_blank" rel="noopener noreferrer" aria-label="Abhishek Shah portfolio">
+      <div class="dev-link-ico" style="background:var(--primary-l)" aria-hidden="true">🌐</div>
       <div><div style="font-weight:600">Portfolio</div><span class="dev-link-url">abhishekshah.vercel.app</span></div>
     </a>
   </div>
-  <div class="dev-footer">BACKSTAX v4 · Built with ♥ by Abhishek Shah</div>
+  <div class="dev-footer">BACKSTAX v4 · Signal over noise · Built with ♥ by Abhishek Shah</div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════
-     SCRIPT LOADING ORDER (dependency chain):
-     1. geo-intelligence.js  — pure data, no deps
-     2. data-engine.js       — depends on GeoIntelligence
-     3. map-renderer.js      — depends on Leaflet + GeoIntelligence
-     4. ui-controller.js     — depends on DataEngine + MapRenderer
-     Then boot() wires everything together.
-═══════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════
+     SCRIPT LOAD ORDER — dependency chain is strict:
+     1. geo-intelligence.js  — zero deps, pure data engine
+     2. data-engine.js       — depends on window.GeoIntelligence
+     3. map-renderer.js      — depends on Leaflet + window.GeoIntelligence
+     4. ui-controller.js     — depends on window.DataEngine + window.MapRenderer
+     5. Boot inline script   — wires everything after DOM ready
+═══════════════════════════════════════════════════════════════ -->
 <script src="geo-intelligence.js"></script>
 <script src="data-engine.js"></script>
 <script src="map-renderer.js"></script>
@@ -782,22 +1032,62 @@ header {
 
 <script>
 'use strict';
-/* ── BOOT ORCHESTRATOR ──────────────────────────────────────────────────── */
+/* ─── BOOT ORCHESTRATOR ──────────────────────────────────────────────────
+   Runs after all 4 scripts are parsed and DOM is ready.
+   Responsibilities:
+   1. MapRenderer.initMap()  — sync, must run before any bx:* events are consumed
+   2. DataEngine.boot()      — fires all data fetches + registers intervals
+   3. Hard loader fallback   — belt-and-suspenders; data-engine.js also has this,
+      but two independent timeouts ensure the loader ALWAYS dismisses even if one
+      script fails to load (e.g. network error on data-engine.js)
+   4. DEV CARD aria sync     — keeps aria-expanded in sync with visual state
+────────────────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Init map (synchronous — must happen before data events fire)
+
+  // 1. Init map (synchronous — establishes layer groups before data arrives)
   MapRenderer.initMap();
 
-  // 2. Fire all data fetches (async — results flow via CustomEvents)
+  // 2. Fire all data fetches simultaneously
   DataEngine.boot();
 
-  // 3. Hard fallback: dismiss loader after 5s regardless
+  // 3. Hard loader fallback — independent of data-engine's own fallback
+  // Ensures loader dismisses even if data-engine.js fails to parse/execute
   setTimeout(() => {
     const ld = document.getElementById('loader');
-    if (ld && !ld.style.display) {
+    if (ld && getComputedStyle(ld).opacity !== '0' && ld.style.display !== 'none') {
       ld.classList.add('fade');
       setTimeout(() => (ld.style.display = 'none'), 450);
     }
-  }, 5000);
+  }, 6000);  // 1s later than data-engine's own 5s fallback
+
+  // 4. DEV CARD: sync aria-expanded on toggle
+  const devBtn = document.getElementById('devBtn');
+  if (devBtn) {
+    const orig = window.toggleDev;
+    window.toggleDev = function() {
+      orig && orig();
+      const isOpen = document.getElementById('devPanel')?.classList.contains('open');
+      devBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    };
+  }
+
+  // 5. Map toolbar: sync aria-pressed on toggle
+  // MapRenderer.toggleLayer is called directly by onclick; wrap it to keep aria in sync
+  const origToggle = window.MapRenderer?.toggleLayer;
+  if (origToggle) {
+    window.MapRenderer.toggleLayer = function(key, btn) {
+      origToggle.call(window.MapRenderer, key, btn);
+      btn.setAttribute('aria-pressed', btn.classList.contains('on') ? 'true' : 'false');
+    };
+  }
+
+  // 6. FIX 3: Wire pConflict pill to bx:geopolitical
+  window.addEventListener('bx:geopolitical', e => {
+    const el = document.getElementById('pConflictCount');
+    const zones = e.detail?.zones || [];
+    const active = zones.filter(z => z.status === 'active').length;
+    if (el) el.textContent = active;
+  });
 });
 </script>
 </body>
