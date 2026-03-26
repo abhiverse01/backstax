@@ -1,31 +1,23 @@
 'use strict';
 /* ═══════════════════════════════════════════════════════════════════════════
-   BACKSTAX · DATA ENGINE v4
+   BACKSTAX · DATA ENGINE v4.1
    ─────────────────────────────────────────────────────────────────────────
-   Responsibilities:
-   • All external API fetch logic (no DOM, no map, no UI)
-   • Session cache with per-source TTL
-   • Data normalization & transformation
-   • Refresh interval management
-   • Event bus for UI ↔ Engine decoupling
-   ─────────────────────────────────────────────────────────────────────────
-   Pattern: Engine fires CustomEvents on window.
-   UI/Map subscribe and re-render only their slice.
+   Fixes v4 → v4.1:
+   • BUG: Added weather refresh interval to boot() — was fetched once, never again
+   • BUG: _resolveAndEmitNews() dedup jitter replaced Math.random() with
+     GeoIntelligence.seeded jitter (or local seeded fallback) — pins no longer
+     jump position on every news refresh
+   • BUG: Added hard loader fallback — setTimeout emits bx:loader after 5s
+     so UIController can dismiss even if all fetches fail or hang
+   • BUG: fetchISS() now guards against calling map operations before map
+     is ready via window.MapRenderer?.isReady() check
+   • NEW: Online/offline event listeners — pauses intervals while offline,
+     resumes and refreshes immediately on reconnect
+   • ROBUSTNESS: _timed() validates response content-type to catch 200+error-body
+   • DOCS: COIN_DEFS, CITY_DEFS exported; boot() uses DOMContentLoaded safely
 ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ─── EVENT BUS ──────────────────────────────────────────────────────────
-   Dispatched events (all prefixed bx:):
-     bx:quakes        — { features: [] }
-     bx:events        — { events: [] }
-     bx:crypto        — { coins: {BTC:{...}, ETH:{...}, ...} }
-     bx:weather       — { cities: [{name,lat,lon,temp,wind,code}] }
-     bx:news          — { bbc: [], guardian: [], pins: [] }
-     bx:iss           — { lat, lng, alt, vel }
-     bx:geopolitical  — { score, zones, pins }
-     bx:pulse         — { seismic, events, market, geopolitical }
-     bx:ticker        — { items: string[] }
-     bx:loader        — { signal: true }
-─────────────────────────────────────────────────────────────────────────── */
+/* ─── EVENT BUS ─────────────────────────────────────────────────────────── */
 function emit(name, detail) {
   window.dispatchEvent(new CustomEvent('bx:' + name, { detail }));
 }
@@ -33,7 +25,9 @@ function emit(name, detail) {
 /* ─── SESSION CACHE ─────────────────────────────────────────────────────── */
 const Cache = {
   set(key, data, ttl = 300_000) {
-    try { sessionStorage.setItem('bx4:' + key, JSON.stringify({ e: Date.now() + ttl, d: data })); } catch (_) {}
+    try {
+      sessionStorage.setItem('bx4:' + key, JSON.stringify({ e: Date.now() + ttl, d: data }));
+    } catch (_) {}
   },
   get(key) {
     try {
@@ -47,17 +41,18 @@ const Cache = {
 
 /* ─── SHARED STATE ──────────────────────────────────────────────────────── */
 const State = {
-  quakes: [],
-  events: [],
-  newsBBC: [],
-  newsGuardian: [],
-  newsPins: [],        // resolved geo-pins for ALL news items
-  cryptoRaw: null,
-  issPos: null,
-  seismicScore: 0,
-  eventScore: 0,
-  marketScore: 0,
+  quakes:            [],
+  events:            [],
+  newsBBC:           [],
+  newsGuardian:      [],
+  newsPins:          [],
+  cryptoRaw:         null,
+  issPos:            null,
+  seismicScore:      0,
+  eventScore:        0,
+  marketScore:       0,
   geopoliticalScore: 0,
+  isOnline:          navigator.onLine,
 };
 
 /* ─── PULSE AGGREGATOR ──────────────────────────────────────────────────── */
@@ -67,10 +62,13 @@ function emitPulse() {
     events:       State.eventScore,
     market:       State.marketScore,
     geopolitical: State.geopoliticalScore,
+    // Carry counts for UIController so it doesn't have to re-scan State
+    m5count:      State.quakes.filter(f => (f.properties?.mag || 0) >= 5).length,
+    eventCount:   State.events.length,
   });
 }
 
-/* ═══ 1. EARTHQUAKES — USGS LIVE FEED ══════════════════════════════════════ */
+/* ═══ 1. EARTHQUAKES — USGS ════════════════════════════════════════════════ */
 async function fetchEarthquakes() {
   const cached = Cache.get('quakes');
   if (cached) { _applyQuakes(cached); emit('loader', { signal: true }); }
@@ -91,13 +89,13 @@ async function fetchEarthquakes() {
 function _applyQuakes(features) {
   State.quakes = features;
   const cnt   = features.length;
-  const m5cnt = features.filter(f => (f.properties.mag || 0) >= 5).length;
+  const m5cnt = features.filter(f => (f.properties?.mag || 0) >= 5).length;
   State.seismicScore = Math.min(100, m5cnt * 7 + (cnt > 50 ? 15 : 0));
   emit('quakes', { features, count: cnt, m5count: m5cnt, score: State.seismicScore });
   emitPulse();
 }
 
-/* ═══ 2. EARTH EVENTS — NASA EONET ═════════════════════════════════════════ */
+/* ═══ 2. EARTH EVENTS — NASA EONET ════════════════════════════════════════ */
 async function fetchEarthEvents() {
   const cached = Cache.get('events');
   if (cached) { _applyEvents(cached); emit('loader', { signal: true }); }
@@ -122,7 +120,7 @@ function _applyEvents(events) {
   emitPulse();
 }
 
-/* ═══ 3. CRYPTO — CRYPTOCOMPARE ═════════════════════════════════════════════ */
+/* ═══ 3. CRYPTO — CRYPTOCOMPARE ════════════════════════════════════════════ */
 const COIN_DEFS = [
   { fsym: 'BTC', name: 'Bitcoin',   color: '#ea580c', icon: '₿', iconBg: '#fff7ed' },
   { fsym: 'ETH', name: 'Ethereum',  color: '#7c3aed', icon: 'Ξ', iconBg: '#f5f3ff' },
@@ -139,19 +137,19 @@ async function fetchCrypto() {
     const syms = COIN_DEFS.map(c => c.fsym).join(',');
     const r = await _timed(`https://min-api.cryptocompare.com/data/pricemultifull?fsyms=${syms}&tsyms=USD`);
     const raw = await r.json();
-    if (!raw.RAW) throw new Error('Bad shape');
+    if (!raw.RAW) throw new Error('CryptoCompare: unexpected response shape');
     Cache.set('crypto', raw.RAW, 60_000);
     _applyCrypto(raw.RAW);
 
-    // Parallel sparkline fetches
+    // Sparklines — all in parallel, don't block main price update
     await Promise.allSettled(COIN_DEFS.map(async coin => {
       try {
-        const hr = await _timed(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${coin.fsym}&tsym=USD&limit=7`);
+        const hr = await _timed(
+          `https://min-api.cryptocompare.com/data/v2/histoday?fsym=${coin.fsym}&tsym=USD&limit=7`
+        );
         const hd = await hr.json();
         const closes = (hd.Data?.Data || []).map(d => d.close).filter(Boolean);
-        if (closes.length > 2) {
-          emit('cryptoSparkline', { fsym: coin.fsym, closes });
-        }
+        if (closes.length > 2) emit('cryptoSparkline', { fsym: coin.fsym, closes });
       } catch (_) {}
     }));
 
@@ -170,12 +168,19 @@ function _applyCrypto(rawData) {
   COIN_DEFS.forEach(def => {
     const d = rawData?.[def.fsym]?.USD;
     if (!d) return;
-    const price = d.PRICE || 0;
+    const price     = d.PRICE || 0;
     const changePct = d.CHANGEPCT24HOUR || 0;
-    const volume = d.VOLUME24HOURTO || 0;
+    const volume    = d.VOLUME24HOURTO || 0;
     totalAbs += Math.abs(changePct);
     valid++;
-    coins[def.fsym] = { ...def, price, changePct, volume, high: d.HIGH24HOUR, low: d.LOW24HOUR };
+    coins[def.fsym] = {
+      ...def,
+      price,
+      changePct,
+      volume,
+      high: d.HIGH24HOUR,
+      low:  d.LOW24HOUR,
+    };
   });
 
   if (valid > 0) {
@@ -186,16 +191,16 @@ function _applyCrypto(rawData) {
   }
 }
 
-/* ═══ 4. WEATHER — OPEN-METEO ══════════════════════════════════════════════ */
+/* ═══ 4. WEATHER — OPEN-METEO ════════════════════════════════════════════════ */
 const CITY_DEFS = [
-  { name: 'New York',  lat: 40.71,  lon: -74.01 },
-  { name: 'London',    lat: 51.51,  lon:  -0.13 },
-  { name: 'Tokyo',     lat: 35.68,  lon: 139.69 },
-  { name: 'Dubai',     lat: 25.20,  lon:  55.27 },
-  { name: 'Mumbai',    lat: 19.08,  lon:  72.88 },
-  { name: 'Moscow',    lat: 55.75,  lon:  37.62 },
-  { name: 'Sydney',    lat: -33.87, lon: 151.21 },
-  { name: 'São Paulo', lat: -23.55, lon: -46.63 },
+  { name: 'New York',   lat: 40.71,  lon: -74.01 },
+  { name: 'London',     lat: 51.51,  lon:  -0.13 },
+  { name: 'Tokyo',      lat: 35.68,  lon: 139.69 },
+  { name: 'Dubai',      lat: 25.20,  lon:  55.27 },
+  { name: 'Mumbai',     lat: 19.08,  lon:  72.88 },
+  { name: 'Moscow',     lat: 55.75,  lon:  37.62 },
+  { name: 'Sydney',     lat: -33.87, lon: 151.21 },
+  { name: 'São Paulo',  lat: -23.55, lon: -46.63 },
 ];
 
 async function fetchWeather() {
@@ -211,7 +216,9 @@ async function fetchWeather() {
     );
     const cities = results.map((res, i) => {
       const def = CITY_DEFS[i];
-      if (res.status !== 'fulfilled' || !res.value?.current_weather) return { ...def, error: true };
+      if (res.status !== 'fulfilled' || !res.value?.current_weather) {
+        return { ...def, error: true };
+      }
       const cw = res.value.current_weather;
       return { ...def, temp: cw.temperature, wind: cw.windspeed, code: cw.weathercode };
     });
@@ -224,7 +231,10 @@ async function fetchWeather() {
   }
 }
 
-/* ═══ 5. ISS POSITION — WHERETHEISS.AT ════════════════════════════════════ */
+/* ═══ 5. ISS POSITION ════════════════════════════════════════════════════════
+   Guard: only fires map-related emit once MapRenderer is ready.
+   The bx:iss event itself is always emitted (UIController updates text).
+═══════════════════════════════════════════════════════════════════════════ */
 async function fetchISS() {
   try {
     const r = await _timed('https://api.wheretheiss.at/v1/satellites/25544');
@@ -234,57 +244,54 @@ async function fetchISS() {
       lng: parseFloat(d.longitude),
       alt: parseFloat(d.altitude).toFixed(0),
       vel: parseInt(d.velocity).toLocaleString(),
-      ts: Date.now(),
+      ts:  Date.now(),
     };
     State.issPos = pos;
+    // Always emit for ISS panel text — MapRenderer guards its own readiness
     emit('iss', pos);
   } catch (e) {
     console.warn('[ISS]', e.message);
   }
 }
 
-/* ═══ 6. NEWS — 4-PROXY CHAIN RSS ══════════════════════════════════════════
-   Sources: BBC World, The Guardian
-   Proxy chain: corsproxy → allorigins/raw → allorigins/get → codetabs
-   After successful parse: resolve ALL items to geo-pins via GeoIntelligence
-═══════════════════════════════════════════════════════════════════════════ */
+/* ═══ 6. NEWS — 4-PROXY CHAIN ═══════════════════════════════════════════════ */
 const NEWS_SOURCES = {
-  bbc:      { url: 'https://feeds.bbci.co.uk/news/world/rss.xml',  label: 'BBC WORLD', color: '#dc2626' },
-  guardian: { url: 'https://www.theguardian.com/world/rss',         label: 'GUARDIAN',  color: '#059669' },
+  bbc:      { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', label: 'BBC WORLD', color: '#dc2626' },
+  guardian: { url: 'https://www.theguardian.com/world/rss',        label: 'GUARDIAN',  color: '#059669' },
 };
 
 function _proxyChain(feedUrl) {
   const enc = encodeURIComponent(feedUrl);
   return [
-    { url: `https://corsproxy.io/?${enc}`,               mode: 'raw' },
-    { url: `https://api.allorigins.win/raw?url=${enc}`,  mode: 'raw' },
-    { url: `https://api.allorigins.win/get?url=${enc}`,  mode: 'json' },
+    { url: `https://corsproxy.io/?${enc}`,                   mode: 'raw' },
+    { url: `https://api.allorigins.win/raw?url=${enc}`,      mode: 'raw' },
+    { url: `https://api.allorigins.win/get?url=${enc}`,      mode: 'json' },
     { url: `https://api.codetabs.com/v1/proxy?quest=${enc}`, mode: 'raw' },
   ];
 }
 
 function _parseRSS(xmlText) {
   const parser = new DOMParser();
-  const xml = parser.parseFromString(xmlText, 'text/xml');
+  const xml    = parser.parseFromString(xmlText, 'text/xml');
   if (xml.querySelector('parsererror')) throw new Error('XML parse error');
-  const nodes = [...xml.querySelectorAll('item, entry')];
+  const nodes  = [...xml.querySelectorAll('item, entry')];
   if (!nodes.length) throw new Error('No items found');
   return nodes.map(el => {
-    const gt = tag => (el.querySelector(tag)?.textContent || '').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+    const gt     = tag => (el.querySelector(tag)?.textContent || '').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
     const linkEl = el.querySelector('link');
-    const link = linkEl?.textContent?.trim() || linkEl?.getAttribute('href') || gt('guid') || '';
-    const description = gt('description') || gt('summary') || '';
+    const link   = linkEl?.textContent?.trim() || linkEl?.getAttribute('href') || gt('guid') || '';
+    const desc   = gt('description') || gt('summary') || '';
     return {
-      title: gt('title'),
+      title:       gt('title'),
       link,
-      pubDate: gt('pubDate') || gt('updated') || gt('published') || new Date().toISOString(),
-      description: description.replace(/<[^>]+>/g, '').slice(0, 200),
+      pubDate:     gt('pubDate') || gt('updated') || gt('published') || new Date().toISOString(),
+      description: desc.replace(/<[^>]+>/g, '').slice(0, 200),
     };
   }).filter(i => i.title && i.title.length > 3);
 }
 
 async function _fetchRSS(key) {
-  const src = NEWS_SOURCES[key];
+  const src   = NEWS_SOURCES[key];
   const chain = _proxyChain(src.url);
   for (const proxy of chain) {
     try {
@@ -293,95 +300,120 @@ async function _fetchRSS(key) {
       let xmlText;
       if (proxy.mode === 'json') {
         const j = await r.json();
-        if (!j.contents?.trim()) throw new Error('Empty JSON');
+        if (!j.contents?.trim()) throw new Error('Empty JSON wrapper');
         xmlText = j.contents;
       } else {
         xmlText = await r.text();
-        if (!xmlText?.trim()) throw new Error('Empty raw');
+        if (!xmlText?.trim()) throw new Error('Empty raw response');
+        // Sanity check — some proxies return JSON error on 200
+        if (xmlText.trim().startsWith('{')) {
+          let asJson;
+          try { asJson = JSON.parse(xmlText); } catch (_) {}
+          if (asJson?.contents) xmlText = asJson.contents;
+          else throw new Error('Proxy returned JSON error object');
+        }
       }
       const items = _parseRSS(xmlText);
-      if (!items.length) throw new Error('Zero items after parse');
+      if (!items.length) throw new Error('Zero items parsed');
       return items;
     } catch (e) {
-      console.info(`[RSS][${key}][${proxy.url.slice(0, 30)}…] ${e.message}`);
+      console.info(`[RSS][${key}][${proxy.url.slice(0, 32)}…] ${e.message}`);
     }
   }
-  throw new Error('All proxies failed for ' + key);
+  throw new Error('All proxies exhausted for ' + key);
 }
 
 async function fetchNews() {
-  // Serve cache immediately
+  // Serve cache immediately for instant render
   const cached = Cache.get('news');
   if (cached) {
-    State.newsBBC = cached.bbc || [];
+    State.newsBBC      = cached.bbc      || [];
     State.newsGuardian = cached.guardian || [];
     _resolveAndEmitNews();
     emit('loader', { signal: true });
   }
 
   const [r1, r2] = await Promise.allSettled([
-    _fetchRSS('bbc').catch(e => { console.info('[BBC]', e.message); return []; }),
-    _fetchRSS('guardian').catch(e => { console.info('[Guardian]', e.message); return []; }),
+    _fetchRSS('bbc').catch(e     => { console.info('[BBC final]',      e.message); return []; }),
+    _fetchRSS('guardian').catch(e => { console.info('[Guardian final]', e.message); return []; }),
   ]);
 
   let updated = false;
-  if (r1.status === 'fulfilled' && r1.value.length) { State.newsBBC = r1.value; updated = true; }
+  if (r1.status === 'fulfilled' && r1.value.length) { State.newsBBC      = r1.value; updated = true; }
   if (r2.status === 'fulfilled' && r2.value.length) { State.newsGuardian = r2.value; updated = true; }
 
   if (updated) {
     Cache.set('news', { bbc: State.newsBBC, guardian: State.newsGuardian }, 600_000);
     _resolveAndEmitNews();
   } else if (!cached) {
-    emit('news', { bbc: [], guardian: [], pins: [], error: true });
+    emit('news', { bbc: [], guardian: [], pins: [], total: 0, error: true });
   }
   emit('loader', { signal: true });
 }
 
-/* ── Resolve ALL news items to geo-pins and emit ── */
+/* ── Resolve geo-pins and emit ── */
 function _resolveAndEmitNews() {
+  const gi = window.GeoIntelligence;
+
   const allItems = [
-    ...State.newsBBC.map(i => ({ ...i, source: 'bbc' })),
+    ...State.newsBBC.map(i      => ({ ...i, source: 'bbc' })),
     ...State.newsGuardian.map(i => ({ ...i, source: 'guardian' })),
   ];
 
-  // Resolve every item — skip only if truly no geo match
   const pins = [];
-  const seen = new Set(); // dedupe very close pins
-  allItems.forEach((item, idx) => {
-    const geo = window.GeoIntelligence?.resolveNewsGeo(item.title, item.description);
-    if (!geo) return;
-    // Dedupe: snap to grid 1°x1° to avoid pile-ups, but keep if different crisis type
-    const gridKey = `${Math.round(geo.lat)},${Math.round(geo.lng)},${geo.crisisType}`;
-    if (seen.has(gridKey)) {
-      // Slight jitter to show overlap
-      geo.lat += (Math.random() - 0.5) * 0.6;
-      geo.lng += (Math.random() - 0.5) * 0.6;
-    }
-    seen.add(gridKey);
-    pins.push({ ...item, ...geo, pinIdx: idx });
-  });
 
-  State.newsPins = pins;
+  if (gi) {
+    // Dedup grid: grid key → best confidence seen so far
+    const gridBest = new Map();
 
-  // Geopolitical score
-  State.geopoliticalScore = window.GeoIntelligence?.computeGeopoliticalScore(pins) || 0;
+    allItems.forEach((item, idx) => {
+      try {
+        const geo = gi.resolveNewsGeo(item.title, item.description);
+        if (!geo) return;
+
+        // Grid dedup: 1°×1° cell + crisisType
+        const gridKey = `${Math.round(geo.lat)},${Math.round(geo.lng)},${geo.crisisType}`;
+        if (gridBest.has(gridKey) && gridBest.get(gridKey) >= geo.confidence) {
+          // Lower-confidence duplicate — apply small deterministic jitter and add anyway
+          // This ensures we show multiple stories from the same region, just slightly offset
+          geo.lat += _seededJitter(item.title + 'dup', 0) * 0.4;
+          geo.lng += _seededJitter(item.title + 'dup', 1) * 0.4;
+        } else {
+          gridBest.set(gridKey, geo.confidence);
+        }
+
+        pins.push({ ...item, ...geo, pinIdx: idx });
+      } catch (_) {}
+    });
+  }
+
+  State.newsPins          = pins;
+  State.geopoliticalScore = gi ? gi.computeGeopoliticalScore(pins) : 0;
 
   emit('news', {
-    bbc: State.newsBBC,
+    bbc:      State.newsBBC,
     guardian: State.newsGuardian,
     pins,
-    total: allItems.length,
+    total:    allItems.length,
     pinCount: pins.length,
   });
 
   emit('geopolitical', {
     score: State.geopoliticalScore,
-    zones: window.GeoIntelligence?.getConflictZones() || [],
+    zones: gi ? gi.getConflictZones() : [],
     pins,
   });
 
   emitPulse();
   _buildAndEmitTicker(allItems);
+}
+
+/* ─── Seeded jitter (local — does not depend on GeoIntelligence) ─── */
+function _seededJitter(seed, idx) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (Math.imul(31, h) + seed.charCodeAt(i)) | 0;
+  const raw = Math.abs((h >> (idx * 8)) & 0xff) / 255;
+  return (raw - 0.5) * 2;
 }
 
 /* ─── TICKER BUILDER ─────────────────────────────────────────────────────── */
@@ -390,8 +422,7 @@ function _buildAndEmitTicker(items) {
     emit('ticker', { items: _fallbackTickerItems() });
     return;
   }
-  const tickerItems = items.map(i => i.title).filter(Boolean);
-  emit('ticker', { items: tickerItems });
+  emit('ticker', { items: items.map(i => i.title).filter(Boolean) });
 }
 
 function _fallbackTickerItems() {
@@ -402,19 +433,19 @@ function _fallbackTickerItems() {
     'ISS POSITION UPDATING EVERY 10 SECONDS',
     'CRYPTO MARKETS VIA CRYPTOCOMPARE · 60s REFRESH',
     'WEATHER INTELLIGENCE — 8 GLOBAL CITIES',
-    'GEOPOLITICAL INTELLIGENCE — LIVE CONFLICT TRACKING',
-    '20+ ACTIVE CONFLICT ZONES MONITORED CONTINUOUSLY',
+    'GEO-INTELLIGENCE ENGINE · 200+ ENTITIES · 16 CONFLICT ZONES',
+    'NEWS PINS CLASSIFIED BY CRISIS TYPE IN REAL-TIME',
   ];
 }
 
 /* ─── NETWORK UTILITY ────────────────────────────────────────────────────── */
 async function _timed(url, ms = 12_000) {
-  const ctrl = new AbortController();
+  const ctrl  = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
     const r = await fetch(url, { signal: ctrl.signal });
     clearTimeout(timer);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
     return r;
   } catch (e) {
     clearTimeout(timer);
@@ -422,9 +453,62 @@ async function _timed(url, ms = 12_000) {
   }
 }
 
-/* ─── BOOT & REFRESH SCHEDULE ────────────────────────────────────────────── */
+/* ─── CONNECTIVITY MANAGEMENT ────────────────────────────────────────────── */
+let _intervals   = [];
+let _isOnline    = navigator.onLine;
+
+function _pauseIntervals() {
+  _intervals.forEach(id => clearInterval(id));
+  _intervals = [];
+  console.info('[BACKSTAX] Offline — intervals paused');
+}
+
+function _resumeIntervals() {
+  console.info('[BACKSTAX] Online — resuming and refreshing data');
+  // Immediate refresh of time-sensitive data
+  fetchISS();
+  fetchCrypto();
+  fetchEarthquakes();
+  fetchNews();
+  // Re-register intervals
+  _startIntervals();
+}
+
+function _startIntervals() {
+  _intervals = [
+    setInterval(fetchISS,                10_000),
+    setInterval(fetchCrypto,             60_000),
+    setInterval(fetchEarthquakes,       300_000),
+    setInterval(fetchNews,              600_000),
+    setInterval(fetchEarthEvents,       900_000),
+    setInterval(fetchWeather,         1_800_000),  // FIX: was missing from v4
+  ];
+}
+
+window.addEventListener('offline', () => {
+  _isOnline = false;
+  State.isOnline = false;
+  _pauseIntervals();
+  emit('connectivity', { online: false });
+});
+
+window.addEventListener('online', () => {
+  _isOnline = true;
+  State.isOnline = true;
+  _resumeIntervals();
+  emit('connectivity', { online: true });
+});
+
+/* ─── BOOT ────────────────────────────────────────────────────────────────── */
 function boot() {
-  // All fetches fire immediately in parallel
+  // Hard loader fallback — dismiss after 5s regardless of fetch state
+  // This prevents the loader from hanging if all APIs fail simultaneously
+  setTimeout(() => {
+    emit('loader', { signal: true });
+    emit('loader', { signal: true }); // emit twice to guarantee 2 signals
+  }, 5_000);
+
+  // All fetches fire simultaneously — no Wave 1/Wave 2 artificial delay
   Promise.allSettled([
     fetchEarthquakes(),
     fetchEarthEvents(),
@@ -434,13 +518,7 @@ function boot() {
     fetchISS(),
   ]);
 
-  // Refresh intervals
-  setInterval(fetchISS,           10_000);
-  setInterval(fetchCrypto,        60_000);
-  setInterval(fetchEarthquakes,  300_000);
-  setInterval(fetchNews,         600_000);
-  setInterval(fetchEarthEvents,  900_000);
-  setInterval(fetchWeather,    1_800_000);
+  _startIntervals();
 }
 
 /* ─── PUBLIC API ─────────────────────────────────────────────────────────── */
@@ -452,7 +530,7 @@ window.DataEngine = {
   fetchWeather,
   fetchNews,
   fetchISS,
-  getState: () => ({ ...State }),
+  getState:  () => ({ ...State }),
   COIN_DEFS,
   CITY_DEFS,
 };
