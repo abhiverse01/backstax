@@ -49,136 +49,6 @@ const $ = id => document.getElementById(id);
     .geo-ev-name{font-size:9px;font-weight:600;flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .geo-ev-type{font-size:7.5px;color:var(--text3);white-space:nowrap;text-transform:capitalize}
 
-    
-    /*
-    ── Reddit panel CSS ──
-    .ri-row: individual post row
-    .ri-score: upvote count + bar assembly
-    .ri-bar-track / .ri-bar-fill: upvote ratio bar
-    .ri-sub-tag: colored subreddit badge
-    .ri-flair: post flair pill
-    .ri-vel: velocity (comments/hr) hot indicator
-    .ri-meta-row: sub-row for meta info
-    .ri-hot-dot: pulsing dot for hot posts
-   */
-      
-    /* ── Reddit intelligence feed ── */
-    .ri-row {
-      padding:8px 13px;
-      border-bottom:1px solid var(--border);
-      cursor:pointer;
-      outline:none;
-      transition:background var(--dur-fast);
-      display:flex;
-      flex-direction:column;
-      gap:4px;
-    }
-    .ri-row:last-child { border-bottom:none; }
-    .ri-row:hover,.ri-row:focus-visible { background:var(--surface2); }
-    .ri-row:focus-visible { box-shadow:inset 0 0 0 1.5px #ff450044; }
- 
-    .ri-header { display:flex;align-items:flex-start;gap:7px; }
-    .ri-icon { font-size:13px;flex-shrink:0;margin-top:1px;line-height:1; }
-    .ri-title { font-size:10px;font-weight:500;line-height:1.42;color:var(--text);flex:1; }
- 
-    .ri-meta-row {
-      display:flex;align-items:center;gap:6px;flex-wrap:wrap;
-    }
-    .ri-sub-tag {
-      font-size:7.5px;font-weight:700;letter-spacing:.06em;
-      padding:2px 6px;border-radius:8px;white-space:nowrap;
-    }
-    .ri-flair {
-      font-size:7.5px;font-weight:600;
-      padding:2px 6px;border-radius:8px;
-      background:rgba(255,69,0,.10);color:#ff4500;
-      white-space:nowrap;overflow:hidden;max-width:90px;text-overflow:ellipsis;
-    }
-    .ri-vel {
-      font-size:7.5px;font-weight:700;
-      color:#ff4500;white-space:nowrap;
-    }
-    .ri-crisis-tag {
-      font-size:7.5px;font-weight:700;
-      white-space:nowrap;
-    }
-    .ri-time { font-size:7.5px;color:var(--text3); }
- 
-    .ri-score-row {
-      display:flex;align-items:center;gap:7px;
-    }
-    .ri-score-num {
-      font-size:9px;font-weight:800;
-      color:#ff4500;
-      font-variant-numeric:tabular-nums;
-      min-width:42px;
-    }
-    .ri-bar-track {
-      flex:1;height:3px;background:var(--surface3);
-      border-radius:3px;overflow:hidden;
-    }
-    .ri-bar-fill {
-      height:100%;border-radius:3px;
-      transition:width .6s cubic-bezier(.4,0,.2,1);
-    }
-    .ri-comments {
-      font-size:8px;color:var(--text3);
-      font-variant-numeric:tabular-nums;
-      white-space:nowrap;
-    }
- 
-    /* Hot badge pulse for high-velocity posts */
-    .ri-hot-dot {
-      width:5px;height:5px;border-radius:50%;
-      background:#ff4500;flex-shrink:0;
-      animation:blink-dot 1.1s ease-in-out infinite;
-    }
- 
-    /* Reddit source tabs */
-    .rtab {
-      padding:3px 9px;border-radius:7px;
-      font-size:8.5px;font-weight:600;letter-spacing:.04em;
-      cursor:pointer;color:var(--text3);
-      background:transparent;border:none;outline:none;
-      transition:background var(--dur-fast),color var(--dur-fast);
-      font-family:var(--fp);white-space:nowrap;flex-shrink:0;
-    }
-    .rtab.on { background:#ff4500;color:#fff; }
-    .rtab:hover:not(.on) { background:#fff1ee;color:#ff4500; }
-    .rtab:focus-visible { box-shadow:0 0 0 2px rgba(255,69,0,.3); }
- 
-    /* Reddit tabs scroll container */
-    .reddit-tabs {
-      display:flex;gap:3px;padding:6px 13px;
-      border-bottom:1px solid var(--border);
-      overflow-x:auto;scrollbar-width:none;
-    }
-    .reddit-tabs::-webkit-scrollbar { display:none; }
- 
-    /* Reddit header stat bar */
-    .ri-stat-bar {
-      display:flex;gap:6px;padding:6px 13px;
-      border-bottom:1px solid var(--border);
-      background:linear-gradient(to right,rgba(255,69,0,.04),transparent);
-    }
-    .ri-stat {
-      display:flex;flex-direction:column;align-items:center;
-      padding:3px 8px;border-radius:7px;
-      background:rgba(255,69,0,.08);
-      border:1px solid rgba(255,69,0,.15);
-      flex:1;
-    }
-    .ri-stat-v {
-      font-size:12px;font-weight:800;
-      color:#ff4500;line-height:1.2;
-      font-variant-numeric:tabular-nums;
-    }
-    .ri-stat-l {
-      font-size:7px;font-weight:600;
-      letter-spacing:.10em;text-transform:uppercase;
-      color:var(--text3);margin-top:1px;
-    }
-   `
     /* ── Connectivity pill (offline state) ── */
     .conn-offline{
       background:var(--red-l)!important;color:var(--red)!important;
@@ -505,32 +375,6 @@ window.addEventListener('bx:news', e => {
   renderNewsTab(_currentTab);
 });
 
-
-/* ─── STATE for Reddit tab ────────────────────────────────────────────── */
-let _redditBySource = {};
-let _redditAllPosts = [];
-let _currentRedditTab = 'all';
- 
-window.addEventListener('bx:reddit', e => {
-  const { posts, pins, total, hotCount, bySource, score, pinCount } = e.detail;
- 
-  _redditAllPosts  = posts || [];
-  _redditBySource  = bySource || {};
- 
-  // Update header pill count
-  const pR = document.getElementById('pRedditCount');
-  if (pR) pR.textContent = total || 0;
- 
-  // Update map stat
-  const msR = document.getElementById('msR');
-  if (msR) msR.textContent = pinCount || 0;
- 
-  // Render the active Reddit tab
-  renderRedditTab(_currentRedditTab);
-});
- 
-
-
 function renderNewsTab(tab) {
   _currentTab      = tab;
   const items      = tab === 'bbc' ? _newsBBC : _newsGuardian;
@@ -586,142 +430,6 @@ function showNewsTab(tab, btn) {
   renderNewsTab(tab);
 }
 window.showNewsTab = showNewsTab;
-function showRedditTab(tabKey, btn) {
-  _currentRedditTab = tabKey;
-  document.querySelectorAll('.rtab').forEach(t => t.classList.remove('on'));
-  if (btn) btn.classList.add('on');
-  renderRedditTab(tabKey);
-}
-window.showRedditTab = showRedditTab;
- 
-function renderRedditTab(tabKey) {
-  const el = document.getElementById('redditFeed');
-  if (!el) return;
- 
-  const REDDIT_SOURCES = window.DataEngine?.REDDIT_SOURCES || [];
- 
-  // Pick posts for this tab
-  let posts;
-  if (tabKey === 'all') {
-    posts = _redditAllPosts;
-  } else {
-    posts = _redditBySource[tabKey] || [];
-  }
- 
-  if (!posts.length) {
-    el.innerHTML = '<div class="empty">No Reddit posts yet — data loading…</div>';
-    return;
-  }
- 
-  // Stats bar
-  const totalScore  = posts.reduce((s, p) => s + p.weightedScore, 0);
-  const hotPosts    = posts.filter(p => p.weightedScore > 1000);
-  const topVel      = Math.max(0, ...posts.map(p => p.velocity || 0));
-  const gi          = window.GeoIntelligence;
- 
-  const statsHtml = `
-    <div class="ri-stat-bar">
-      <div class="ri-stat">
-        <span class="ri-stat-v">${posts.length}</span>
-        <span class="ri-stat-l">Posts</span>
-      </div>
-      <div class="ri-stat">
-        <span class="ri-stat-v">${hotPosts.length}</span>
-        <span class="ri-stat-l">Hot</span>
-      </div>
-      <div class="ri-stat">
-        <span class="ri-stat-v">${topVel > 999 ? (topVel/1000).toFixed(1)+'K' : topVel}</span>
-        <span class="ri-stat-l">Peak /hr</span>
-      </div>
-      <div class="ri-stat">
-        <span class="ri-stat-v">${totalScore > 99999 ? (totalScore/1000).toFixed(0)+'K' : totalScore.toLocaleString()}</span>
-        <span class="ri-stat-l">Signals</span>
-      </div>
-    </div>
-  `;
- 
-  const rows = [];
-  for (const post of posts.slice(0, 18)) {
-    try {
-      // Geo pin lookup from cached pins
-      const vis = gi ? gi.getCrisisVisual(post.crisisType) : null;
- 
-      const isHot  = (post.velocity || 0) > 50 || post.weightedScore > 2000;
-      const ratio  = Math.round((post.upvoteRatio || 0.5) * 100);
-      const ratioC = ratio > 80 ? '#059669' : ratio > 60 ? '#d97706' : '#dc2626';
-      const safeUrl = esc(post.url || '#');
-      const titleEsc = esc(post.title || '');
- 
-      const subSrc   = (window.DataEngine?.REDDIT_SOURCES || []).find(s => s.sub === post.sub);
-      const subColor = subSrc?.color || '#ff4500';
-      const subIcon  = subSrc?.icon  || '🟠';
- 
-      const flairHtml = post.flair
-        ? `<span class="ri-flair">${esc(post.flair)}</span>`
-        : '';
- 
-      const velHtml = (post.velocity || 0) > 10
-        ? `<span class="ri-vel">🔥 ${post.velocity}/hr</span>`
-        : '';
- 
-      const crisisHtml = vis && post.crisisType !== 'general'
-        ? `<span class="ri-crisis-tag" style="color:${vis.color}">${vis.emoji} ${esc(vis.label)}</span>`
-        : '';
- 
-      // Map fly-to — only if geo-resolved
-      const hasPins = _redditAllPosts.some(p => p.id === post.id && p.lat !== undefined);
-      const mapBtnHtml = hasPins
-        ? `<button class="ni-map-btn" style="color:#ff4500"
-             onclick="(function(){
-               const p=window._redditAllPosts?.find(x=>x.id==='${post.id}');
-               if(p&&p.lat) window.MapRenderer?.flyTo(p.lat,p.lng,5);
-             })();event.stopPropagation()"
-             title="Locate on map" aria-label="Show on map">📍</button>`
-        : '';
- 
-      rows.push(`
-        <div class="ri-row" onclick="window.open('${safeUrl}','_blank','noopener,noreferrer')"
-             tabindex="0" role="button" aria-label="${titleEsc}">
- 
-          <div class="ri-header">
-            ${isHot ? '<span class="ri-hot-dot"></span>' : ''}
-            <span class="ri-icon">${subIcon}</span>
-            <span class="ri-title">${titleEsc}</span>
-            ${mapBtnHtml}
-          </div>
- 
-          <div class="ri-meta-row">
-            <span class="ri-sub-tag" style="background:${subColor}18;color:${subColor}">
-              r/${esc(post.sub)}
-            </span>
-            ${flairHtml}
-            ${velHtml}
-            ${crisisHtml}
-            <span class="ri-time">${timeAgo(post.created)}</span>
-          </div>
- 
-          <div class="ri-score-row">
-            <span class="ri-score-num">▲ ${
-              post.score > 9999 ? (post.score/1000).toFixed(1)+'K' : post.score.toLocaleString()
-            }</span>
-            <div class="ri-bar-track">
-              <div class="ri-bar-fill" style="width:${ratio}%;background:${ratioC}"></div>
-            </div>
-            <span class="ri-comments">💬 ${
-              post.comments > 999 ? (post.comments/1000).toFixed(1)+'K' : post.comments
-            }</span>
-          </div>
- 
-        </div>
-      `);
-    } catch (_) {
-      // Error boundary — skip bad post silently
-    }
-  }
- 
-  el.innerHTML = statsHtml + rows.join('');
-}
-
 
 /* ─── GEOPOLITICAL PANEL ─────────────────────────────────────────────────── */
 window.addEventListener('bx:geopolitical', e => {
@@ -792,12 +500,6 @@ window.addEventListener('bx:pulse', e => {
   setPulse('geoBar', 'geoVal', geopolitical,
     geopolitical < 20 ? 'Stable' : geopolitical < 45 ? 'Tense' : geopolitical < 70 ? 'Volatile' : 'Critical');
 
-  setPulse('redditBar', 'redditVal', reddit || 0,
-    (reddit || 0) < 25 ? 'Quiet'
-    : (reddit || 0) < 55 ? 'Active'
-    : (reddit || 0) < 80 ? 'Surging'
-    : 'Viral'
-  );
   // Factor row — FIXED: use emitted counts, not DataEngine.getState() re-scan
   const tfQ = $('tfQ'), tfE = $('tfE'), tfM = $('tfM'), tfG = $('tfGeo');
   if (tfQ) tfQ.textContent = (m5count   || '—') + (m5count    !== undefined ? ' events' : '');
@@ -806,13 +508,12 @@ window.addEventListener('bx:pulse', e => {
   if (tfG) tfG.textContent = (geopolitical || 0) + '/100';
 
   // Composite threat ring: seismic 20% + events 15% + market 15% + geopolitical 50%
-   const composite = Math.min(100, Math.round(
-     (seismic      || 0) * 0.18 +
-     (events       || 0) * 0.13 +
-     (market       || 0) * 0.13 +
-     (geopolitical || 0) * 0.46 +
-     (reddit       || 0) * 0.10
-   ));
+  const composite = Math.min(100, Math.round(
+    (seismic || 0) * 0.20 +
+    (events  || 0) * 0.15 +
+    (market  || 0) * 0.15 +
+    (geopolitical || 0) * 0.50
+  ));
   _drawThreatRing(composite);
   _updateThreatChip(composite);
 });
