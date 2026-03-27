@@ -64,7 +64,6 @@ function initMap() {
   LAYERS.q = L.layerGroup().addTo(MAP);
   LAYERS.i = L.layerGroup().addTo(MAP);
   LAYERS.r = L.layerGroup().addTo(MAP);
-  LY.r = LAYERS.r;   ← if your file uses LY alias
 
   mapReady = true;
 
