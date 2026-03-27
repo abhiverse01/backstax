@@ -548,6 +548,21 @@ header {
   .tkr-item  { padding:0 14px; font-size:9.5px; }
 }
 @media (max-width:374px) { .map-btn { padding:6px 7px; } .ms { padding:3px 8px; } }
+/* ── Reddit pill color ── */
+.p-reddit { background:#fff1ee; color:#ff4500; border-color:#ffbfad; }
+.p-reddit .dot { background:#ff4500; }
+ 
+/* ── Reddit Intelligence card accent line ── */
+.card-reddit-accent {
+  height:2px;
+  background:linear-gradient(90deg,#ff4500,#ff6314,transparent);
+}
+ 
+/* ── Reddit pulse bar color ── */
+/* Uses existing .pulse-fill — color set by setPulse() dynamically */
+ 
+/* ── Reddit threat factor dot ── */
+.tf-reddit { background:#ff4500; }
 </style>
 </head>
 <body>
@@ -602,6 +617,9 @@ header {
     </div>
     <div class="pill p-info" id="pNews">
       <span class="dot" aria-hidden="true"></span>INTEL <span id="pNCount">—</span>
+    </div>
+    <div class="pill p-reddit" id="pReddit">
+        <span class="dot" aria-hidden="true"></span>REDDIT <span id="pRedditCount">—</span>
     </div>
   </div>
 
@@ -790,6 +808,14 @@ header {
     <button class="map-btn on" id="btnC" onclick="MapRenderer.toggleLayer('c',this)" aria-pressed="true" aria-label="Toggle conflict zone overlays">
       <span class="mb-dot" aria-hidden="true"></span><span>Zones</span>
     </button>
+    <button class="map-btn on" id="btnR"
+        onclick="MapRenderer.toggleLayer('r',this)"
+        aria-pressed="true"
+        aria-label="Toggle Reddit intelligence pins"
+        style="border-color:rgba(255,69,0,.35)">
+        <span class="mb-dot" style="background:#ff4500" aria-hidden="true"></span>
+        <span>Reddit</span>
+     </button>
   </div>
 
   <div id="map"></div>
@@ -807,6 +833,19 @@ header {
     <div class="ml-row"><div class="ml-dot" style="background:#0284c7"></div>Maritime / Shipping</div>
     <div class="ml-row"><div class="ml-dot" style="background:#059669"></div>Diplomacy</div>
     <div class="ml-row"><div class="ml-dot" style="background:#2563eb"></div>General Intel</div>
+    <div class="ml-section">Community Intel</div>
+    <div class="ml-row">
+      <div class="ml-dot" style="background:#ff4500"></div>World / Geopolitics
+    </div>
+    <div class="ml-row">
+      <div class="ml-dot" style="background:#dc2626"></div>Conflict (r/war)
+    </div>
+    <div class="ml-row">
+      <div class="ml-dot" style="background:#7c3aed"></div>Space / ISS
+    </div>
+    <div class="ml-row">
+      <div class="ml-dot" style="background:#059669"></div>Economy
+    </div>
     <div class="ml-section">Natural</div>
     <div class="ml-row"><div class="ml-dot" style="background:#ca8a04"></div>Earthquake M4.5+</div>
     <div class="ml-row"><div class="ml-dot" style="background:#ea580c"></div>Wildfire / Volcano</div>
@@ -819,6 +858,10 @@ header {
     <div class="ms"><span class="ms-val" id="msE">—</span><span class="ms-lbl">Events</span></div>
     <div class="ms"><span class="ms-val" id="msPins">—</span><span class="ms-lbl">Intel Pins</span></div>
     <div class="ms"><span class="ms-val" id="msN">—</span><span class="ms-lbl">Headlines</span></div>
+    <div class="ms" style="border-color:rgba(255,69,0,.2)">
+        <span class="ms-val" id="msR" style="color:#ff4500">—</span>
+        <span class="ms-lbl">Reddit</span>
+    </div>
   </div>
 </main>
 
@@ -866,6 +909,56 @@ header {
       </div>
     </div>
   </div>
+   
+  <!-- Reddit Intelligence Feed -->
+   
+   <div class="card">
+     <!-- Accent line — Reddit orange gradient at top -->
+     <div class="card-reddit-accent"></div>
+    
+     <div class="card-hdr">
+       <div class="card-title" style="display:flex;align-items:center;gap:6px">
+         <span style="font-size:13px">🟠</span>
+         Reddit Intel
+       </div>
+       <div class="badge" style="background:#fff1ee;color:#ff4500">
+         COMMUNITY
+       </div>
+       <button class="icon-btn" onclick="DataEngine.fetchRedditIntel()"
+         title="Refresh Reddit intelligence" aria-label="Refresh Reddit data"
+         style="color:#ff4500">↻</button>
+     </div>
+    
+     <!-- Subreddit source tabs — scrollable row -->
+     <div class="reddit-tabs" role="tablist" aria-label="Reddit source tabs">
+       <button class="rtab on" onclick="showRedditTab('all',this)"
+         role="tab" aria-selected="true">All</button>
+       <button class="rtab" onclick="showRedditTab('worldnews',this)"
+         role="tab" aria-selected="false">🌍 World</button>
+       <button class="rtab" onclick="showRedditTab('geopolitics',this)"
+         role="tab" aria-selected="false">⚔️ Geo</button>
+       <button class="rtab" onclick="showRedditTab('war',this)"
+         role="tab" aria-selected="false">🔴 War</button>
+       <button class="rtab" onclick="showRedditTab('space',this)"
+         role="tab" aria-selected="false">🛸 Space</button>
+       <button class="rtab" onclick="showRedditTab('economy',this)"
+         role="tab" aria-selected="false">📈 Economy</button>
+       <button class="rtab" onclick="showRedditTab('CryptoCurrency',this)"
+         role="tab" aria-selected="false">₿ Crypto</button>
+     </div>
+    
+     <!-- Live feed — rendered by renderRedditTab() -->
+     <div id="redditFeed" aria-live="polite" aria-label="Reddit intelligence feed"
+          style="max-height:380px;overflow-y:auto">
+       <div class="card-body">
+         <div class="skel skel-line w85" style="margin-bottom:6px"></div>
+         <div class="skel skel-line w70" style="margin-bottom:6px"></div>
+         <div class="skel skel-line w85" style="margin-bottom:6px"></div>
+         <div class="skel skel-line w50"></div>
+       </div>
+     </div>
+   </div>
+  
 
   <!-- Global Pulse + Threat Score -->
   <div class="card">
@@ -901,6 +994,19 @@ header {
         </div>
         <div class="pulse-track"><div class="pulse-fill" id="geoBar" style="width:0;background:var(--green)"></div></div>
       </div>
+      <div class="pulse-row">
+        <div class="pulse-hdr">
+          <span class="pulse-lbl" style="display:flex;align-items:center;gap:4px">
+            <span style="font-size:8px">🟠</span>
+            Community Signal
+          </span>
+          <span class="pulse-val" id="redditVal" style="color:var(--text3)">—</span>
+        </div>
+        <div class="pulse-track">
+          <div class="pulse-fill" id="redditBar"
+            style="width:0;background:#ff4500"></div>
+        </div>
+       </div>
     </div>
 
     <!-- Composite threat ring — 4-dimension weighted score -->
@@ -943,6 +1049,11 @@ header {
           <span class="tf-lbl">Geopolitical</span>
           <span class="tf-val" id="tfGeo">—</span>
         </div>
+        <div class="tf">
+           <div class="tf-dot" style="background:#ff4500"></div>
+           <span class="tf-lbl">Community Signal</span>
+           <span class="tf-val" id="tfReddit">—</span>
+         </div>
       </div>
     </div>
   </div>
@@ -1088,6 +1199,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const active = zones.filter(z => z.status === 'active').length;
     if (el) el.textContent = active;
   });
+  // Expose _redditAllPosts globally for map pin flyTo from popup buttons
+   window._redditAllPosts = [];
+   window.addEventListener('bx:reddit', e => {
+     window._redditAllPosts = e.detail?.pins || [];
+    
+     // Wire tfReddit factor row
+     const tfR = document.getElementById('tfReddit');
+     if (tfR) {
+       const score = e.detail?.score || 0;
+       tfR.textContent = score + '/100';
+       tfR.style.color = score > 70 ? '#dc2626' : score > 40 ? '#d97706' : '#ff4500';
+     }
+   });
+    
+   // Wire bx:pulse to also update Reddit pulse bar + tfReddit
+   // (supplements the bx:reddit handler above with pulse bar animation)
+   const _origPulseHandler = window.__bxPulseHandler;
+   window.addEventListener('bx:pulse', e => {
+     const reddit = e.detail?.reddit || 0;
+    
+     // Reddit pulse bar
+     const bar = document.getElementById('redditBar');
+     const val = document.getElementById('redditVal');
+     if (bar) {
+       bar.style.width = reddit + '%';
+       bar.style.background = reddit < 25 ? '#ff4500' : reddit < 55 ? '#ea580c' : '#dc2626';
+     }
+     if (val) {
+       val.textContent = reddit < 25 ? 'Quiet' : reddit < 55 ? 'Active' : reddit < 80 ? 'Surging' : 'Viral';
+       val.style.color = reddit < 25 ? '#ff4500' : reddit < 55 ? '#ea580c' : '#dc2626';
+     }
+   });
+   
 });
 </script>
 </body>
