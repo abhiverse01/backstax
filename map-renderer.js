@@ -30,10 +30,9 @@ const LAYERS = {
   i: null,   // ISS
   n: null,   // News pins
   c: null,   // Conflict zones
-  r: null,   // Reddit intelligence pins
 };
 
-const LAYER_STATE = { q: true, e: true, i: true, n: true, c: true, r: true };
+const LAYER_STATE = { q: true, e: true, i: true, n: true, c: true };
 
 /* ─── MAP INIT ───────────────────────────────────────────────────────────── */
 function initMap() {
@@ -56,14 +55,13 @@ function initMap() {
   L.polyline([[0, -180], [0, 180]],  { color: 'rgba(37,99,235,.05)', weight: 1, dashArray: '6,14', interactive: false }).addTo(MAP);
   L.polyline([[-90, 0], [90, 0]],   { color: 'rgba(37,99,235,.05)', weight: 1, dashArray: '6,14', interactive: false }).addTo(MAP);
 
-  //Initialise layer groups — conflict zones use a lower pane so they sit
+  // Initialize layer groups — conflict zones use a lower pane so they sit
   // under markers but are still clickable
   LAYERS.c = L.layerGroup().addTo(MAP);
   LAYERS.n = L.layerGroup().addTo(MAP);
   LAYERS.e = L.layerGroup().addTo(MAP);
   LAYERS.q = L.layerGroup().addTo(MAP);
   LAYERS.i = L.layerGroup().addTo(MAP);
-  LAYERS.r = L.layerGroup().addTo(MAP);
 
   mapReady = true;
 
@@ -84,7 +82,6 @@ function initMap() {
   window.addEventListener('bx:connectivity', e => {
     _showConnectivityOverlay(!e.detail.online);
   });
-  window.addEventListener('bx:reddit', e => renderRedditPins(e.detail));
 }
 
 /* ─── CONNECTIVITY OVERLAY ───────────────────────────────────────────────── */
@@ -395,140 +392,6 @@ function renderNewsPins({ pins }) {
       .addTo(LAYERS.n);
   });
 }
-
-/* ═══ REDDIT PIN RENDERING ══════════════════════════════════════════════════
-   Reddit pins are visually distinct from news (BBC/Guardian) pins:
-   • Reddit-orange (#ff4500) base with per-subreddit tint
-   • Size scales with weightedScore — hot posts are large, pulsing
-   • Velocity ring: posts with high comments/hour glow brighter
-   • Crisis-typed coloring overlaid on Reddit orange for conflict posts
-   • Popup shows: upvote bar, comment count, flair badge, velocity, source tag
-═══════════════════════════════════════════════════════════════════════════ */
-const MAX_REDDIT_PINS = 40;
- 
-function renderRedditPins({ pins, posts }) {
-  if (!mapReady || !pins) return;
-  LAYERS.r.clearLayers();
- 
-  const subset = pins.slice(0, MAX_REDDIT_PINS);
- 
-  subset.forEach(pin => {
-    // Pin size: log-scale on weightedScore, range 6–18px
-    const sz = Math.min(18, Math.max(6, Math.round(4 + Math.log1p(pin.weightedScore) * 1.4)));
- 
-    // Color: conflict/war posts get crisis color tinted toward Reddit orange,
-    // others get the subreddit's assigned color
-    const gi      = window.GeoIntelligence;
-    const vis     = gi ? gi.getCrisisVisual(pin.crisisType) : null;
-    const baseClr = (['war','terrorism','conflict'].includes(pin.crisisType))
-      ? _blendColors(vis?.color || '#ff4500', pin.color, 0.6)
-      : pin.color;
- 
-    // Velocity glow: high velocity (>50 comments/hr) pulses
-    const isHot   = (pin.velocity || 0) > 50 || pin.weightedScore > 2000;
-    const opacity = Math.min(0.95, 0.55 + Math.min(pin.confidence || 0, 1) * 0.4);
- 
-    const iconHtml = isHot
-      ? `<div style="
-            width:${sz}px;height:${sz}px;border-radius:50%;
-            background:${baseClr};
-            opacity:${opacity};
-            border:2px solid rgba(255,255,255,0.6);
-            box-shadow:0 0 ${sz + 4}px ${baseClr}cc;
-            animation:qpulse 2s infinite;
-          "></div>`
-      : `<div style="
-            width:${sz}px;height:${sz}px;border-radius:50%;
-            background:${baseClr};
-            opacity:${opacity};
-            border:1.5px solid rgba(255,255,255,0.45);
-            box-shadow:0 0 ${sz}px ${baseClr}88;
-          "></div>`;
- 
-    const icon = mkIcon(iconHtml, sz, sz);
- 
-    // Upvote ratio bar (visual fill 0–100%)
-    const ratioFill   = Math.round((pin.upvoteRatio || 0.5) * 100);
-    const ratioColor  = ratioFill > 80 ? '#059669' : ratioFill > 60 ? '#d97706' : '#dc2626';
-    const safeUrl     = esc(pin.url || '#');
-    const titleShort  = esc((pin.title || '').length > 65 ? (pin.title || '').slice(0, 65) + '…' : (pin.title || ''));
-    const flairHtml   = pin.flair
-      ? `<span style="font-size:7.5px;padding:1px 6px;border-radius:8px;background:${pin.color}20;color:${pin.color};font-weight:700">${esc(pin.flair)}</span>`
-      : '';
-    const velHtml     = (pin.velocity || 0) > 10
-      ? `<span style="font-size:7.5px;color:#ff4500;font-weight:700">🔥 ${pin.velocity}/hr</span>`
-      : '';
- 
-    L.marker([pin.lat, pin.lng], { icon })
-      .bindPopup(`
-        <div class="pp-head" style="gap:5px">
-          <span style="font-size:12px">${pin.icon || '🟠'}</span>
-          ${titleShort}
-          <span class="pp-badge" style="background:${pin.color}20;color:${pin.color};white-space:nowrap">
-            r/${esc(pin.sub)}
-          </span>
-        </div>
- 
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-          ${flairHtml}
-          ${velHtml}
-          ${vis ? `<span style="font-size:7.5px;color:${vis.color};font-weight:700">${vis.emoji} ${esc(vis.label)}</span>` : ''}
-        </div>
- 
-        <div class="pp-grid">
-          <span class="pp-k">Score</span>
-          <span class="pp-v" style="color:#ff4500;font-weight:800">
-            ▲ ${pin.score.toLocaleString()}
-            <span style="font-size:8px;color:var(--text3);font-weight:400"> (×${pin.weight} = ${pin.weightedScore.toLocaleString()})</span>
-          </span>
- 
-          <span class="pp-k">Upvotes</span>
-          <span class="pp-v">
-            <span style="display:inline-block;width:60px;height:5px;background:#e2e8f0;border-radius:3px;vertical-align:middle;margin-right:5px">
-              <span style="display:block;width:${ratioFill}%;height:100%;background:${ratioColor};border-radius:3px"></span>
-            </span>
-            ${ratioFill}%
-          </span>
- 
-          <span class="pp-k">Comments</span>
-          <span class="pp-v">${(pin.comments || 0).toLocaleString()}</span>
-          <span class="pp-k">Region</span>
-          <span class="pp-v">${esc(pin.entity || '—')}</span>
-          <span class="pp-k">Age</span>
-          <span class="pp-v">${timeAgo(pin.created)}</span>
-        </div>
- 
-        ${pin.selftext ? `<div style="font-size:8.5px;color:var(--text2);margin-top:7px;line-height:1.5;padding-top:6px;border-top:1px solid var(--border)">${esc(pin.selftext.slice(0, 130))}…</div>` : ''}
- 
-        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-          <a href="${safeUrl}" target="_blank" rel="noopener noreferrer"
-             style="font-size:9px;color:#ff4500;text-decoration:none;font-weight:700">
-            View on Reddit →
-          </a>
-        </div>
-      `)
-      .addTo(LAYERS.r);
-  });
-}
- 
-/* ─── Color blend utility ─────────────────────────────────────────────────
-   Blends two hex colors. ratio 0=full c1, 1=full c2.
-   Used to tint conflict posts toward subreddit brand color.
-─────────────────────────────────────────────────────────────────────────── */
-function _blendColors(c1, c2, ratio) {
-  try {
-    const hex = h => parseInt(h.replace('#',''), 16);
-    const r1 = (hex(c1) >> 16) & 255, g1 = (hex(c1) >> 8) & 255, b1 = hex(c1) & 255;
-    const r2 = (hex(c2) >> 16) & 255, g2 = (hex(c2) >> 8) & 255, b2 = hex(c2) & 255;
-    const r  = Math.round(r1 + (r2 - r1) * ratio);
-    const g  = Math.round(g1 + (g2 - g1) * ratio);
-    const b  = Math.round(b1 + (b2 - b1) * ratio);
-    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-  } catch (_) {
-    return c1;
-  }
-}
-
 
 /* ─── PUBLIC API ─────────────────────────────────────────────────────────── */
 window.MapRenderer = {
