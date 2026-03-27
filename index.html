@@ -79,7 +79,7 @@
     animation-duration:.01ms!important;
     animation-iteration-count:1!important;
     transition-duration:.01ms!important;
-    will-change:auto!important;
+    will-change:auto!important;          /* ← added: clears all will-change */
     scroll-behavior:auto!important;
   }
 }
@@ -203,6 +203,7 @@ header {
 
 /* ── CRYPTO LIST ── */
 .cr-list { display:flex; flex-direction:column; }
+/* FIX 5: tabindex added in HTML; focus-visible ring here */
 .cr {
   display:flex; align-items:center; gap:9px; padding:7px 9px;
   border-radius:9px; cursor:pointer; outline:none;
@@ -270,6 +271,7 @@ header {
 
 /* ── EVENT ROWS ── */
 .ev-list { display:flex; flex-direction:column; }
+/* FIX 5: tabindex added in HTML; focus ring here */
 .ev { display:flex; align-items:flex-start; gap:9px; padding:7px 9px; border-radius:9px; cursor:pointer; outline:none; transition:background var(--dur-fast); }
 .ev:hover,.ev:focus-visible { background:var(--surface2); }
 .ev:focus-visible { box-shadow:inset 0 0 0 1.5px var(--primary-m); }
@@ -497,6 +499,7 @@ header {
 .err   { font-size:9.5px; color:var(--red); padding:10px; text-align:center; background:var(--red-l); border-radius:8px; margin:6px; }
 @keyframes numflash { 0%{background:#dbeafe}100%{background:transparent} }
 .flash  { animation:numflash var(--dur-slow) ease; border-radius:4px; }
+/* FIX 4: Screen-reader only utility — used on aria-live regions */
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 
 /* ── RESPONSIVE — TABLET (600–899px) ── */
@@ -545,19 +548,6 @@ header {
   .tkr-item  { padding:0 14px; font-size:9.5px; }
 }
 @media (max-width:374px) { .map-btn { padding:6px 7px; } .ms { padding:3px 8px; } }
-
-/* ── Reddit pill color ── */
-.p-reddit { background:#fff1ee; color:#ff4500; border-color:#ffbfad; }
-.p-reddit .dot { background:#ff4500; }
-
-/* ── Reddit Intelligence card accent line ── */
-.card-reddit-accent {
-  height:2px;
-  background:linear-gradient(90deg,#ff4500,#ff6314,transparent);
-}
-
-/* ── Reddit threat factor dot ── */
-.tf-reddit { background:#ff4500; }
 </style>
 </head>
 <body>
@@ -573,6 +563,7 @@ header {
   <div class="ld-wordmark" aria-hidden="true">BACK<em>STAX</em></div>
   <div class="ld-bar-wrap" aria-hidden="true"><div class="ld-bar"></div></div>
   <div class="ld-sub" aria-hidden="true">World Monitor</div>
+  <!-- FIX 6: Status messages updated by data-engine loader events -->
   <div class="ld-status" id="ldStatus">Connecting to intelligence streams…</div>
   <span class="sr-only">Loading world intelligence data</span>
 </div>
@@ -602,6 +593,7 @@ header {
     <div class="pill p-warn" id="pEvent">
       <span class="dot" aria-hidden="true"></span>EVENTS <span id="pECount">—</span>
     </div>
+    <!-- FIX 3: pConflict pill — ui-controller updates conflict count from bx:geopolitical -->
     <div class="pill p-crit" id="pConflict">
       <span class="dot" aria-hidden="true"></span>CONFLICTS <span id="pConflictCount">16</span>
     </div>
@@ -610,9 +602,6 @@ header {
     </div>
     <div class="pill p-info" id="pNews">
       <span class="dot" aria-hidden="true"></span>INTEL <span id="pNCount">—</span>
-    </div>
-    <div class="pill p-reddit" id="pReddit">
-        <span class="dot" aria-hidden="true"></span>REDDIT <span id="pRedditCount">—</span>
     </div>
   </div>
 
@@ -637,9 +626,10 @@ header {
     <div class="card-hdr">
       <div class="card-title">Markets</div>
       <div class="badge b-green">CRYPTOCOMPARE</div>
-      <button class="icon-btn" onclick="DataEngine?.fetchCrypto()" title="Refresh markets" aria-label="Refresh market data">↻</button>
+      <button class="icon-btn" onclick="DataEngine.fetchCrypto()" title="Refresh markets" aria-label="Refresh market data">↻</button>
     </div>
     <div style="padding:4px">
+      <!-- FIX 5: tabindex="0" + role="button" on .cr rows for keyboard nav -->
       <div class="cr-list" id="cryptoList" role="list">
         <div class="cr" role="listitem" tabindex="0" aria-label="Bitcoin price">
           <div class="cr-icon" style="background:#fff7ed;color:#ea580c" aria-hidden="true">₿</div>
@@ -675,7 +665,7 @@ header {
     </div>
   </div>
 
-  <!-- Geopolitical Intelligence -->
+  <!-- Geopolitical Intelligence (replaces COVID panel) -->
   <div class="card">
     <div class="card-hdr">
       <div class="card-title">Geopolitical Intel</div>
@@ -701,6 +691,7 @@ header {
         </div>
       </div>
     </div>
+    <!-- Top conflicts list — FIX 4: aria-live for dynamic updates -->
     <div style="padding:4px 4px 8px">
       <div style="padding:0 9px 4px;font-size:7.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)">
         TOP ACTIVE CONFLICTS
@@ -740,6 +731,7 @@ header {
       <div class="badge b-sky">8 CITIES</div>
     </div>
     <div style="padding:4px">
+      <!-- FIX 4: aria-live on dynamic weather panel -->
       <div id="wxPanel" aria-live="polite" aria-label="City weather data">
         <div class="card-body">
           <div class="skel skel-line w85"></div>
@@ -756,9 +748,10 @@ header {
     <div class="card-hdr">
       <div class="card-title">Seismic Alerts</div>
       <div class="badge b-red">USGS LIVE</div>
-      <button class="icon-btn" onclick="DataEngine?.fetchEarthquakes()" title="Refresh seismic data" aria-label="Refresh earthquake data">↻</button>
+      <button class="icon-btn" onclick="DataEngine.fetchEarthquakes()" title="Refresh seismic data" aria-label="Refresh earthquake data">↻</button>
     </div>
     <div style="padding:4px">
+      <!-- FIX 4: aria-live on seismic list -->
       <div class="ev-list" id="quakeList" aria-live="polite" aria-label="Recent earthquakes">
         <div class="card-body">
           <div class="skel skel-block"></div>
@@ -773,6 +766,7 @@ header {
 
 <!-- ─── MAP ──────────────────────────────────────────────── -->
 <main id="map-wrap" aria-label="World intelligence map">
+  <!-- Corner brackets -->
   <div class="mc mc-tl" aria-hidden="true"></div>
   <div class="mc mc-tr" aria-hidden="true"></div>
   <div class="mc mc-bl" aria-hidden="true"></div>
@@ -780,29 +774,22 @@ header {
 
   <!-- Map layer toolbar -->
   <div class="map-toolbar" role="toolbar" aria-label="Map layer controls">
-    <button class="map-btn on" id="btnQ" onclick="MapRenderer?.toggleLayer('q',this)" aria-pressed="true" aria-label="Toggle seismic markers">
+    <button class="map-btn on" id="btnQ" onclick="MapRenderer.toggleLayer('q',this)" aria-pressed="true" aria-label="Toggle seismic markers">
       <span class="mb-dot" aria-hidden="true"></span><span>Seismic</span>
     </button>
-    <button class="map-btn on" id="btnE" onclick="MapRenderer?.toggleLayer('e',this)" aria-pressed="true" aria-label="Toggle earth events">
+    <button class="map-btn on" id="btnE" onclick="MapRenderer.toggleLayer('e',this)" aria-pressed="true" aria-label="Toggle earth events">
       <span class="mb-dot" aria-hidden="true"></span><span>Events</span>
     </button>
-    <button class="map-btn on" id="btnI" onclick="MapRenderer?.toggleLayer('i',this)" aria-pressed="true" aria-label="Toggle ISS tracker">
+    <button class="map-btn on" id="btnI" onclick="MapRenderer.toggleLayer('i',this)" aria-pressed="true" aria-label="Toggle ISS tracker">
       <span class="mb-dot" aria-hidden="true"></span><span>ISS</span>
     </button>
-    <button class="map-btn on" id="btnN" onclick="MapRenderer?.toggleLayer('n',this)" aria-pressed="true" aria-label="Toggle intelligence news pins">
+    <button class="map-btn on" id="btnN" onclick="MapRenderer.toggleLayer('n',this)" aria-pressed="true" aria-label="Toggle intelligence news pins">
       <span class="mb-dot" aria-hidden="true"></span><span>Intel</span>
     </button>
-    <button class="map-btn on" id="btnC" onclick="MapRenderer?.toggleLayer('c',this)" aria-pressed="true" aria-label="Toggle conflict zone overlays">
+    <!-- FIX 1: Conflict zones layer toggle — was missing, now present -->
+    <button class="map-btn on" id="btnC" onclick="MapRenderer.toggleLayer('c',this)" aria-pressed="true" aria-label="Toggle conflict zone overlays">
       <span class="mb-dot" aria-hidden="true"></span><span>Zones</span>
     </button>
-    <button class="map-btn on" id="btnR"
-        onclick="MapRenderer?.toggleLayer('r',this)"
-        aria-pressed="true"
-        aria-label="Toggle Reddit intelligence pins"
-        style="border-color:rgba(255,69,0,.35)">
-        <span class="mb-dot" style="background:#ff4500" aria-hidden="true"></span>
-        <span>Reddit</span>
-     </button>
   </div>
 
   <div id="map"></div>
@@ -820,11 +807,6 @@ header {
     <div class="ml-row"><div class="ml-dot" style="background:#0284c7"></div>Maritime / Shipping</div>
     <div class="ml-row"><div class="ml-dot" style="background:#059669"></div>Diplomacy</div>
     <div class="ml-row"><div class="ml-dot" style="background:#2563eb"></div>General Intel</div>
-    <div class="ml-section">Community Intel</div>
-    <div class="ml-row"><div class="ml-dot" style="background:#ff4500"></div>World / Geopolitics</div>
-    <div class="ml-row"><div class="ml-dot" style="background:#dc2626"></div>Conflict (r/war)</div>
-    <div class="ml-row"><div class="ml-dot" style="background:#7c3aed"></div>Space / ISS</div>
-    <div class="ml-row"><div class="ml-dot" style="background:#059669"></div>Economy</div>
     <div class="ml-section">Natural</div>
     <div class="ml-row"><div class="ml-dot" style="background:#ca8a04"></div>Earthquake M4.5+</div>
     <div class="ml-row"><div class="ml-dot" style="background:#ea580c"></div>Wildfire / Volcano</div>
@@ -837,10 +819,6 @@ header {
     <div class="ms"><span class="ms-val" id="msE">—</span><span class="ms-lbl">Events</span></div>
     <div class="ms"><span class="ms-val" id="msPins">—</span><span class="ms-lbl">Intel Pins</span></div>
     <div class="ms"><span class="ms-val" id="msN">—</span><span class="ms-lbl">Headlines</span></div>
-    <div class="ms" style="border-color:rgba(255,69,0,.2)">
-        <span class="ms-val" id="msR" style="color:#ff4500">—</span>
-        <span class="ms-lbl">Reddit</span>
-    </div>
   </div>
 </main>
 
@@ -852,12 +830,13 @@ header {
     <div class="card-hdr">
       <div class="card-title">World Intel</div>
       <div class="badge b-blue">LIVE RSS</div>
-      <button class="icon-btn" onclick="DataEngine?.fetchNews()" title="Refresh news" aria-label="Refresh news feed">↻</button>
+      <button class="icon-btn" onclick="DataEngine.fetchNews()" title="Refresh news" aria-label="Refresh news feed">↻</button>
     </div>
     <div class="news-tabs" role="tablist" aria-label="News sources">
       <button class="ntab on" onclick="showNewsTab('bbc',this)" role="tab" aria-selected="true">BBC World</button>
       <button class="ntab"    onclick="showNewsTab('guardian',this)" role="tab" aria-selected="false">Guardian</button>
     </div>
+    <!-- FIX 4: aria-live on news feed -->
     <div class="news-list" id="newsFeed" aria-live="polite" aria-label="Latest world headlines">
       <div class="card-body" style="padding:12px 13px">
         <div class="skel skel-line w50" style="margin-bottom:4px"></div>
@@ -874,9 +853,10 @@ header {
     <div class="card-hdr">
       <div class="card-title">Earth Events</div>
       <div class="badge b-amber">NASA EONET</div>
-      <button class="icon-btn" onclick="DataEngine?.fetchEarthEvents()" title="Refresh earth events" aria-label="Refresh earth events">↻</button>
+      <button class="icon-btn" onclick="DataEngine.fetchEarthEvents()" title="Refresh earth events" aria-label="Refresh earth events">↻</button>
     </div>
     <div style="padding:4px">
+      <!-- FIX 4: aria-live on earth events -->
       <div class="ev-list" id="earthList" aria-live="polite" aria-label="Active earth events">
         <div class="card-body">
           <div class="skel skel-block"></div>
@@ -886,56 +866,12 @@ header {
       </div>
     </div>
   </div>
-   
-  <!-- Reddit Intelligence Feed -->
-  <div class="card">
-     <div class="card-reddit-accent"></div>
-    
-     <div class="card-hdr">
-       <div class="card-title" style="display:flex;align-items:center;gap:6px">
-         <span style="font-size:13px">🟠</span>
-         Reddit Intel
-       </div>
-       <div class="badge" style="background:#fff1ee;color:#ff4500">
-         COMMUNITY
-       </div>
-       <button class="icon-btn" onclick="DataEngine?.fetchRedditIntel()"
-         title="Refresh Reddit intelligence" aria-label="Refresh Reddit data"
-         style="color:#ff4500">↻</button>
-     </div>
-    
-     <div class="reddit-tabs" role="tablist" aria-label="Reddit source tabs">
-       <button class="rtab on" onclick="showRedditTab('all',this)"
-         role="tab" aria-selected="true">All</button>
-       <button class="rtab" onclick="showRedditTab('worldnews',this)"
-         role="tab" aria-selected="false">🌍 World</button>
-       <button class="rtab" onclick="showRedditTab('geopolitics',this)"
-         role="tab" aria-selected="false">⚔️ Geo</button>
-       <button class="rtab" onclick="showRedditTab('war',this)"
-         role="tab" aria-selected="false">🔴 War</button>
-       <button class="rtab" onclick="showRedditTab('space',this)"
-         role="tab" aria-selected="false">🛸 Space</button>
-       <button class="rtab" onclick="showRedditTab('economy',this)"
-         role="tab" aria-selected="false">📈 Economy</button>
-       <button class="rtab" onclick="showRedditTab('CryptoCurrency',this)"
-         role="tab" aria-selected="false">₿ Crypto</button>
-     </div>
-    
-     <div id="redditFeed" aria-live="polite" aria-label="Reddit intelligence feed"
-          style="max-height:380px;overflow-y:auto">
-       <div class="card-body">
-         <div class="skel skel-line w85" style="margin-bottom:6px"></div>
-         <div class="skel skel-line w70" style="margin-bottom:6px"></div>
-         <div class="skel skel-line w85" style="margin-bottom:6px"></div>
-         <div class="skel skel-line w50"></div>
-       </div>
-     </div>
-   </div>
 
   <!-- Global Pulse + Threat Score -->
   <div class="card">
     <div class="card-hdr"><div class="card-title">Global Pulse</div></div>
 
+    <!-- 4 live pulse bars — geopolitical dimension added -->
     <div class="pulse-wrap" aria-label="Global activity indicators" aria-live="polite">
       <div class="pulse-row">
         <div class="pulse-hdr">
@@ -965,21 +901,9 @@ header {
         </div>
         <div class="pulse-track"><div class="pulse-fill" id="geoBar" style="width:0;background:var(--green)"></div></div>
       </div>
-      <div class="pulse-row">
-        <div class="pulse-hdr">
-          <span class="pulse-lbl" style="display:flex;align-items:center;gap:4px">
-            <span style="font-size:8px">🟠</span>
-            Community Signal
-          </span>
-          <span class="pulse-val" id="redditVal" style="color:var(--text3)">—</span>
-        </div>
-        <div class="pulse-track">
-          <div class="pulse-fill" id="redditBar" style="width:0;background:#ff4500"></div>
-        </div>
-       </div>
     </div>
 
-    <!-- Composite threat ring -->
+    <!-- Composite threat ring — 4-dimension weighted score -->
     <div class="threat-block">
       <div class="threat-hdr">Composite Threat Score</div>
       <div class="threat-row">
@@ -996,6 +920,7 @@ header {
         </div>
       </div>
 
+      <!-- All 4 threat factors — FIX: tfGeo id confirmed (not tfG) -->
       <div class="threat-factors" aria-label="Threat factor breakdown">
         <div class="tf">
           <div class="tf-dot" style="background:var(--red)"></div>
@@ -1012,16 +937,12 @@ header {
           <span class="tf-lbl">Market Volatility</span>
           <span class="tf-val" id="tfM">—</span>
         </div>
+        <!-- FIX: id="tfGeo" (ui-controller uses this exact ID) -->
         <div class="tf">
           <div class="tf-dot" style="background:var(--red)"></div>
           <span class="tf-lbl">Geopolitical</span>
           <span class="tf-val" id="tfGeo">—</span>
         </div>
-        <div class="tf">
-           <div class="tf-dot" style="background:#ff4500"></div>
-           <span class="tf-lbl">Community Signal</span>
-           <span class="tf-val" id="tfReddit">—</span>
-         </div>
       </div>
     </div>
   </div>
@@ -1113,31 +1034,21 @@ header {
 'use strict';
 /* ─── BOOT ORCHESTRATOR ──────────────────────────────────────────────────
    Runs after all 4 scripts are parsed and DOM is ready.
-   RESPONSIBILITIES:
+   Responsibilities:
    1. MapRenderer.initMap()  — sync, must run before any bx:* events are consumed
    2. DataEngine.boot()      — fires all data fetches + registers intervals
-   3. Hard loader fallback   — ensures loader ALWAYS dismisses
+   3. Hard loader fallback   — belt-and-suspenders; data-engine.js also has this,
+      but two independent timeouts ensure the loader ALWAYS dismisses even if one
+      script fails to load (e.g. network error on data-engine.js)
    4. DEV CARD aria sync     — keeps aria-expanded in sync with visual state
-   
-   FIXED: Added defensive checks for all window objects before calling them.
-══════════════════════════════════════════════════════════════════════════ */
+────────────────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
 
   // 1. Init map (synchronous — establishes layer groups before data arrives)
-  // FIXED: Defensive check before calling MapRenderer
-  if (window.MapRenderer && typeof window.MapRenderer.initMap === 'function') {
-    window.MapRenderer.initMap();
-  } else {
-    console.error('BACKSTAX: MapRenderer not loaded — map-renderer.js may have a syntax error or failed to load');
-  }
+  MapRenderer.initMap();
 
   // 2. Fire all data fetches simultaneously
-  // FIXED: Defensive check before calling DataEngine
-  if (window.DataEngine && typeof window.DataEngine.boot === 'function') {
-    window.DataEngine.boot();
-  } else {
-    console.error('BACKSTAX: DataEngine not loaded — data-engine.js may have a syntax error or failed to load');
-  }
+  DataEngine.boot();
 
   // 3. Hard loader fallback — independent of data-engine's own fallback
   // Ensures loader dismisses even if data-engine.js fails to parse/execute
@@ -1147,20 +1058,21 @@ document.addEventListener('DOMContentLoaded', () => {
       ld.classList.add('fade');
       setTimeout(() => (ld.style.display = 'none'), 450);
     }
-  }, 6000);
+  }, 6000);  // 1s later than data-engine's own 5s fallback
 
   // 4. DEV CARD: sync aria-expanded on toggle
   const devBtn = document.getElementById('devBtn');
-  if (devBtn && typeof window.toggleDev === 'function') {
+  if (devBtn) {
     const orig = window.toggleDev;
     window.toggleDev = function() {
-      orig();
+      orig && orig();
       const isOpen = document.getElementById('devPanel')?.classList.contains('open');
       devBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     };
   }
 
   // 5. Map toolbar: sync aria-pressed on toggle
+  // MapRenderer.toggleLayer is called directly by onclick; wrap it to keep aria in sync
   const origToggle = window.MapRenderer?.toggleLayer;
   if (origToggle) {
     window.MapRenderer.toggleLayer = function(key, btn) {
@@ -1169,45 +1081,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // 6. Wire pConflict pill to bx:geopolitical
+  // 6. FIX 3: Wire pConflict pill to bx:geopolitical
   window.addEventListener('bx:geopolitical', e => {
     const el = document.getElementById('pConflictCount');
     const zones = e.detail?.zones || [];
     const active = zones.filter(z => z.status === 'active').length;
     if (el) el.textContent = active;
   });
-
-  // 7. Expose _redditAllPosts globally for map pin flyTo from popup buttons
-  window._redditAllPosts = [];
-  window.addEventListener('bx:reddit', e => {
-    window._redditAllPosts = e.detail?.pins || [];
-    
-    // Wire tfReddit factor row
-    const tfR = document.getElementById('tfReddit');
-    if (tfR) {
-      const score = e.detail?.score || 0;
-      tfR.textContent = score + '/100';
-      tfR.style.color = score > 70 ? '#dc2626' : score > 40 ? '#d97706' : '#ff4500';
-    }
-  });
-   
-  // 8. Wire bx:pulse to also update Reddit pulse bar
-  window.addEventListener('bx:pulse', e => {
-    const reddit = e.detail?.reddit || 0;
-    
-    // Reddit pulse bar
-    const bar = document.getElementById('redditBar');
-    const val = document.getElementById('redditVal');
-    if (bar) {
-      bar.style.width = reddit + '%';
-      bar.style.background = reddit < 25 ? '#ff4500' : reddit < 55 ? '#ea580c' : '#dc2626';
-    }
-    if (val) {
-      val.textContent = reddit < 25 ? 'Quiet' : reddit < 55 ? 'Active' : reddit < 80 ? 'Surging' : 'Viral';
-      val.style.color = reddit < 25 ? '#ff4500' : reddit < 55 ? '#ea580c' : '#dc2626';
-    }
-  });
-   
 });
 </script>
 </body>
