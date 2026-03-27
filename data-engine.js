@@ -48,8 +48,6 @@ const State = {
   newsPins:          [],
   cryptoRaw:         null,
   issPos:            null,
-  redditPosts:       [],
-  redditScore:       0,          // community-weighted geopolitical signal
   seismicScore:      0,
   eventScore:        0,
   marketScore:       0,
@@ -67,7 +65,6 @@ function emitPulse() {
     // Carry counts for UIController so it doesn't have to re-scan State
     m5count:      State.quakes.filter(f => (f.properties?.mag || 0) >= 5).length,
     eventCount:   State.events.length,
-    reddit:       State.redditScore,
   });
 }
 
@@ -256,174 +253,6 @@ async function fetchISS() {
     console.warn('[ISS]', e.message);
   }
 }
-
- 
-/* ═══ 7. REDDIT INTELLIGENCE — Free public JSON API ══════════════════════
-   No auth. No key. Reddit sends Access-Control-Allow-Origin: * on .json.
-   User-Agent header prevents Reddit 429 rate-limiting on repeat calls.
-   
-   Sources and roles:
-   • r/worldnews    → geopolitical events, global breaking news
-   • r/geopolitics  → deep analysis, conflict context
-   • r/war          → active conflict tracking (raw, fast)
-   • r/space        → ISS events, launch news
-   • r/economy      → economic stress signals
-   • r/CryptoCurrency → market sentiment + FUD/hype detection
-   • r/EarthquakeWatch → community seismic reports
- 
-   Output: bx:reddit event with posts array, scores, geo-resolved pins
-   Reddit score spike (high upvotes in short time) bumps State.redditScore.
-═══════════════════════════════════════════════════════════════════════════ */
-const REDDIT_SOURCES = [
-  { sub: 'worldnews',       sort: 'new',  limit: 20, weight: 1.4, tag: 'World',    color: '#ff4500', icon: '🌍' },
-  { sub: 'geopolitics',     sort: 'hot',  limit: 15, weight: 1.3, tag: 'Geo',      color: '#ff6314', icon: '⚔️' },
-  { sub: 'war',             sort: 'new',  limit: 15, weight: 1.5, tag: 'Conflict', color: '#dc2626', icon: '🔴' },
-  { sub: 'space',           sort: 'hot',  limit: 10, weight: 0.8, tag: 'Space',    color: '#7c3aed', icon: '🛸' },
-  { sub: 'economy',         sort: 'hot',  limit: 10, weight: 0.9, tag: 'Economy',  color: '#059669', icon: '📈' },
-  { sub: 'CryptoCurrency',  sort: 'hot',  limit: 10, weight: 0.7, tag: 'Crypto',   color: '#d97706', icon: '₿'  },
-  { sub: 'EarthquakeWatch', sort: 'new',  limit: 10, weight: 1.0, tag: 'Seismic',  color: '#ca8a04', icon: '⚡' },
-];
- 
-async function fetchRedditIntel() {
-  // Serve cache instantly
-  const cached = Cache.get('reddit');
-  if (cached) {
-    _applyReddit(cached);
-    emit('loader', { signal: true });
-  }
- 
-  try {
-    // Fetch all subreddits in parallel
-    const results = await Promise.allSettled(
-      REDDIT_SOURCES.map(src =>
-        _timed(
-          `https://www.reddit.com/r/${src.sub}/${src.sort}.json?limit=${src.limit}&raw_json=1`,
-          15_000
-        )
-        .then(r => r.json())
-        .then(d => ({
-          src,
-          posts: (d?.data?.children || []).map(c => c.data).filter(Boolean),
-        }))
-        .catch(() => ({ src, posts: [] }))
-      )
-    );
- 
-    // Flatten + normalise
-    const allPosts = [];
-    const seenIds  = new Set();
- 
-    for (const result of results) {
-      if (result.status !== 'fulfilled') continue;
-      const { src, posts } = result.value;
- 
-      for (const p of posts) {
-        if (seenIds.has(p.id) || !p.title) continue;
-        seenIds.add(p.id);
- 
-        // Weighted score = raw reddit score × source weight, capped
-        const weightedScore = Math.round((p.score || 0) * src.weight);
- 
-        // Velocity score: comments-per-hour since post creation
-        const ageHours = Math.max(0.1, (Date.now() / 1000 - p.created_utc) / 3600);
-        const velocity = Math.round((p.num_comments || 0) / ageHours);
- 
-        // Skip near-zero engagement (noise)
-        if (p.score < 5 && p.num_comments < 2) continue;
- 
-        allPosts.push({
-          id:           p.id,
-          title:        p.title,
-          url:          `https://reddit.com${p.permalink}`,
-          score:        p.score || 0,
-          weightedScore,
-          velocity,
-          comments:     p.num_comments || 0,
-          upvoteRatio:  p.upvote_ratio || 0.5,
-          flair:        p.link_flair_text || null,
-          created:      p.created_utc * 1000,
-          domain:       p.domain || '',
-          selftext:     (p.selftext || '').slice(0, 200),
-          thumbnail:    (p.thumbnail && p.thumbnail.startsWith('http')) ? p.thumbnail : null,
-          // Source metadata
-          sub:          src.sub,
-          tag:          src.tag,
-          color:        src.color,
-          icon:         src.icon,
-          weight:       src.weight,
-        });
-      }
-    }
- 
-    // Sort by weightedScore descending
-    allPosts.sort((a, b) => b.weightedScore - a.weightedScore);
- 
-    Cache.set('reddit', allPosts, 600_000);  // 10-min cache
-    _applyReddit(allPosts);
-    emit('loader', { signal: true });
- 
-  } catch (e) {
-    console.warn('[Reddit]', e.message);
-    emit('loader', { signal: true });
-  }
-}
- 
-function _applyReddit(posts) {
-  State.redditPosts = posts;
- 
-  // Reddit signal score: driven by hot post velocity + war/conflict post volume
-  const hotPosts    = posts.filter(p => p.weightedScore > 1000);
-  const conflictSub = posts.filter(p => ['worldnews','geopolitics','war'].includes(p.sub));
-  const topScore    = Math.max(0, ...posts.map(p => p.weightedScore));
- 
-  // Normalise to 0–100
-  State.redditScore = Math.min(100, Math.round(
-    (conflictSub.length * 2.5) +
-    (hotPosts.length   * 4.0) +
-    (Math.log1p(topScore) * 1.5)
-  ));
- 
-  // Geo-resolve all posts for map pins — reuse existing GeoIntelligence pipeline
-  const gi   = window.GeoIntelligence;
-  const pins = [];
-  if (gi) {
-    const gridBest = new Map();
-    posts.forEach((post, idx) => {
-      try {
-        const geo = gi.resolveNewsGeo(post.title, post.selftext);
-        if (!geo) return;
-        const gridKey = `${Math.round(geo.lat)},${Math.round(geo.lng)},${post.sub}`;
-        if (!gridBest.has(gridKey) || gridBest.get(gridKey) < geo.confidence) {
-          gridBest.set(gridKey, geo.confidence);
-        } else {
-          // Slight deterministic offset for overlap
-          geo.lat += _seededJitter(post.id + 'r', 0) * 0.5;
-          geo.lng += _seededJitter(post.id + 'r', 1) * 0.5;
-        }
-        pins.push({ ...post, ...geo, pinIdx: idx });
-      } catch (_) {}
-    });
-  }
- 
-  emit('reddit', {
-    posts,
-    pins,
-    total:       posts.length,
-    pinCount:    pins.length,
-    score:       State.redditScore,
-    hotCount:    posts.filter(p => p.weightedScore > 1000).length,
-    // Per-sub breakdown for the sidebar tabs
-    bySource:    REDDIT_SOURCES.reduce((acc, src) => {
-      acc[src.sub] = posts.filter(p => p.sub === src.sub);
-      return acc;
-    }, {}),
-  });
- 
-  // Reddit also feeds the pulse
-  emitPulse();
-}
- 
-
 
 /* ═══ 6. NEWS — 4-PROXY CHAIN ═══════════════════════════════════════════════ */
 const NEWS_SOURCES = {
@@ -653,7 +482,6 @@ function _startIntervals() {
     setInterval(fetchNews,              600_000),
     setInterval(fetchEarthEvents,       900_000),
     setInterval(fetchWeather,         1_800_000),  // FIX: was missing from v4
-    setInterval(fetchRedditIntel,     600_000),   // Reddit: every 10min
   ];
 }
 
@@ -688,7 +516,6 @@ function boot() {
     fetchWeather(),
     fetchNews(),
     fetchISS(),
-    fetchRedditIntel(),
   ]);
 
   _startIntervals();
@@ -706,6 +533,4 @@ window.DataEngine = {
   getState:  () => ({ ...State }),
   COIN_DEFS,
   CITY_DEFS,
-  fetchRedditIntel,
-  REDDIT_SOURCES, 
 };
