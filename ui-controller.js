@@ -61,7 +61,7 @@ const $ = id => document.getElementById(id);
     .ri-meta-row: sub-row for meta info
     .ri-hot-dot: pulsing dot for hot posts
    */
-    `  
+      
     /* ── Reddit intelligence feed ── */
     .ri-row {
       padding:8px 13px;
