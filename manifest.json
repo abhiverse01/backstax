@@ -1,0 +1,8 @@
+{
+  "name": "BACKSTAX World Monitor",
+  "short_name": "BACKSTAX",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eef2f7",
+  "theme_color": "#2563eb"
+}
