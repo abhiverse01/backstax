@@ -7,7 +7,6 @@
 > **Real-time world intelligence dashboard**  
 > Live seismic events, market signals, ISS tracking, environmental events, and global news — all **in a single HTML file**. Browser-native. Zero backend. Zero cost.
 
----
 
 ## 🚀 Live Demo
 
@@ -16,7 +15,6 @@
 ![BACKSTAX Demo](https://user-images.githubusercontent.com/000000/placeholder-demo.gif "Live demo placeholder")  
 *Interactive map with real-time updates*
 
----
 
 ## 🧠 What BACKSTAX Does
 
@@ -25,7 +23,6 @@
 - Computes **Global Threat Score**
 - Runs entirely in-browser, offline-capable via Service Worker
 
----
 
 ## 🔥 Core Intelligence Layers
 
@@ -39,7 +36,6 @@
 | 📰 News Intel | BBC / Guardian via proxy chain | 10 min |
 | 🧬 Global Health | disease.sh | 1 hr |
 
----
 
 ## 🧮 Threat Intelligence Engine
 
@@ -59,7 +55,6 @@ Threat Score = (Seismic × 0.45) + (Events × 0.30) + (Market × 0.25)
 
 > Derived, not a feed. Pure signal.
 
----
 
 ## 🗺️ System Architecture
 
@@ -97,7 +92,6 @@ index.html
 
 ![Architecture Diagram](https://user-images.githubusercontent.com/000000/placeholder-architecture.png "System Architecture Diagram")
 
----
 
 ## 🧩 Tech Stack
 
@@ -109,7 +103,6 @@ HTML · CSS · Vanilla JavaScript · Leaflet.js
 * No build steps
 * No API keys
 
----
 
 ## ⚙️ Run Locally
 
@@ -122,7 +115,6 @@ npx serve .
 python3 -m http.server
 ```
 
----
 
 ## 🌐 News Proxy System (CORS Bypass)
 
@@ -136,7 +128,6 @@ corsproxy.io → allorigins.win/raw → allorigins.win/get → codetabs.com
 * Automatic silent fallback
 * No third-party RSS libraries
 
----
 
 ## ⚡ PWA & Offline
 
@@ -144,8 +135,6 @@ corsproxy.io → allorigins.win/raw → allorigins.win/get → codetabs.com
 * Offline fallback for navigation & data
 * Auto-update detection (with optional user confirmation)
 * Instant activation via `skipWaiting`
-
----
 
 ## 🎯 Features
 
@@ -160,8 +149,6 @@ corsproxy.io → allorigins.win/raw → allorigins.win/get → codetabs.com
 * Developer info card (`?` button)
 * Full offline support
 
----
-
 ## ⚠️ Limitations
 
 * Free/public API tiers → occasional rate limits
@@ -169,7 +156,6 @@ corsproxy.io → allorigins.win/raw → allorigins.win/get → codetabs.com
 * ISS tracking depends on external uptime
 * Stateless: no historical storage
 
----
 
 ## 🖌️ Design Philosophy
 
@@ -180,7 +166,6 @@ corsproxy.io → allorigins.win/raw → allorigins.win/get → codetabs.com
 * Stateless → real-time signals
 * Lightweight → zero dependency, fast load
 
----
 
 ## 👨‍💻 Developer
 
@@ -190,29 +175,23 @@ corsproxy.io → allorigins.win/raw → allorigins.win/get → codetabs.com
 🔗 [Portfolio](https://abhishekshah.vercel.app)
 🔗 [GitHub](https://github.com/abhiverse01)
 
----
 
 ## 📜 License
 
 MIT — free to use, modify, and build upon.
-
----
 
 ## ⭐ Extra Visuals (optional)
 
 ![Map Layers](https://user-images.githubusercontent.com/000000/placeholder-maplayers.gif "Map Layer Toggle Demo")
 ![Threat Score](https://user-images.githubusercontent.com/000000/placeholder-threat.gif "Threat Score Pulse Demo")
 
----
 
 ## 💡 Contribution Guide
 
 1. Fork the repository
 2. Open `index.html` locally
-3. Improve UI, add layers, optimize performance
+3. Improve UI, add layers, optimise performance
 4. Submit PR with clear description & screenshots
-
----
 
 > BACKSTAX is not just a dashboard — it’s a **browser-native global intelligence system**.
 > Every signal. Every event. One map. One file. Zero hassle.
