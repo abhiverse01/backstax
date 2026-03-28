@@ -2122,6 +2122,12 @@ header {
         bootState.swRegistered = true;
         log.info('Service Worker registered successfully:', registration.scope);
         
+        // Service worker reload
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+           log.info('New Service Worker activated, reloading...');
+           window.location.reload();
+        });
+                  
         // Handle updates
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
