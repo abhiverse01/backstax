@@ -27,22 +27,28 @@ const EXTERNAL_PATTERNS = [
 ─────────────────────────────────────────────────────────────────────────── */
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[BACKSTAX SW] Caching static assets');
-        // Cache static assets individually to handle failures gracefully
-        return Promise.allSettled(
-          STATIC_ASSETS.map(url =>
-            cache.add(url).catch(err => {
-              console.warn(`[BACKSTAX SW] Failed to cache: ${url}`, err.message);
-            })
-          )
-        );
-      })
-      .then(() => {
-        console.log('[BACKSTAX SW] Install complete');
-        return self.skipWaiting();
-      })
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      console.log('[BACKSTAX SW] Caching static assets');
+
+      const results = await Promise.allSettled(
+        STATIC_ASSETS.map(async (url) => {
+          try {
+            const fullUrl = new URL(url, self.location.origin + BASE_PATH).href;
+            await cache.add(fullUrl);
+            console.log('[BACKSTAX SW] Cached:', fullUrl);
+          } catch (err) {
+            console.warn('[BACKSTAX SW] Failed to cache:', url, err.message);
+          }
+        })
+      );
+
+      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      console.log(`[BACKSTAX SW] Cached ${successCount}/${STATIC_ASSETS.length} assets`);
+
+      await self.skipWaiting();
+      console.log('[BACKSTAX SW] Install complete');
+    })()
   );
 });
 
