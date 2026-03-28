@@ -9,10 +9,10 @@ const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 // Assets to cache on install (static resources)
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/ui-controller.js',
-  '/map-renderer.js'
+  './',
+  './index.html',
+  './ui-controller.js',
+  './map-renderer.js'
 ];
 
 // External resources to cache on first request
