@@ -5,8 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 
 <!-- ═══════════════════════════════════════════════════════════════════════
-   BACKSTAX v4.2 — PRODUCTION ENHANCED
+   BACKSTAX v4.2.1 — PRODUCTION ENHANCED (FIXED)
    ═══════════════════════════════════════════════════════════════════════
+   FIXES:
+   • PWA: Service Worker registration with existence check and graceful fallback
+   • OFFLINE: Online/offline detection with visual status banner
+   • TOAST: Toast notification system for errors and status messages
+   
    ENHANCEMENTS:
    • PWA: Web App Manifest + Service Worker registration
    • SECURITY: CSP meta tags, integrity hashes placeholder
@@ -27,11 +32,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
 <!-- Preconnect is sufficient for fonts; CSS will load the font files -->
-<!-- Note: Google Fonts CSS URLs should NOT be preloaded with as="style" as it causes warnings -->
 <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" as="style">
-
-<!-- Prefetch next-navigation resources (done after page load) -->
-<!-- <link rel="prefetch" href="/about.html"> -->
 
 <!-- ─── META TAGS ─────────────────────────────────────────────────────────── -->
 <meta name="theme-color" content="#2563eb">
@@ -126,7 +127,7 @@
 
 <style>
 /* ══════════════════════════════════════════════════════════════
-   BACKSTAX v4.2 — PRODUCTION STYLESHEET (ENHANCED)
+   BACKSTAX v4.2.1 — PRODUCTION STYLESHEET (ENHANCED + FIXED)
    ══════════════════════════════════════════════════════════════ */
 
 /* ─── CSS CUSTOM PROPERTIES (DESIGN TOKENS) ─────────────────────────────── */
@@ -201,6 +202,19 @@
   --left-panel-w: 272px;
   --right-panel-w: 298px;
   --mobile-nav-h: 54px;
+  
+  /* Z-index scale */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-tooltip: 700;
+  --z-toast: 800;
+  --z-offline-banner: 900;
+  --z-loader: 9999;
 }
 
 /* ─── DARK MODE SUPPORT (Future-proof) ───────────────────────────────────── */
@@ -247,7 +261,8 @@
 /* ─── PRINT STYLES ───────────────────────────────────────────────────────── */
 @media print {
   .app { display: block; }
-  header, .ticker, .mob-nav, .dev-btn, .dev-panel, .map-toolbar, .map-legend { display: none !important; }
+  header, .ticker, .mob-nav, .dev-btn, .dev-panel, .map-toolbar, .map-legend,
+  .offline-banner, .toast-container { display: none !important; }
   .left-panel, .right-panel { 
     position: static; 
     width: 100%; 
@@ -311,6 +326,175 @@ body {
   outline: none;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   NEW: OFFLINE BANNER
+════════════════════════════════════════════════════════════════════════ */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-offline-banner);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, var(--amber), #f59e0b);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: transform var(--dur-med) var(--ease-out), opacity var(--dur-med);
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+}
+
+.offline-banner.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.offline-banner .offline-icon {
+  font-size: 14px;
+  animation: pulse-offline 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-offline {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.offline-banner.online {
+  background: linear-gradient(135deg, var(--green), #10b981);
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+}
+
+/* Push app content down when banner is visible */
+.offline-banner.visible ~ .app {
+  margin-top: 34px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   NEW: TOAST NOTIFICATION SYSTEM
+════════════════════════════════════════════════════════════════════════ */
+.toast-container {
+  position: fixed;
+  bottom: calc(24px + var(--safe-b));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  max-width: calc(100vw - 32px);
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-md);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  pointer-events: all;
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  animation: toast-in var(--dur-spring) var(--ease-spring) forwards;
+  max-width: 360px;
+}
+
+.toast.exiting {
+  animation: toast-out var(--dur-fast) var(--ease-out) forwards;
+}
+
+@keyframes toast-in {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+}
+
+.toast-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.toast-close {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--dur-fast), color var(--dur-fast);
+  flex-shrink: 0;
+}
+
+.toast-close:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+/* Toast variants */
+.toast.success {
+  border-left: 3px solid var(--green);
+}
+
+.toast.success .toast-icon {
+  color: var(--green);
+}
+
+.toast.error {
+  border-left: 3px solid var(--red);
+}
+
+.toast.error .toast-icon {
+  color: var(--red);
+}
+
+.toast.warning {
+  border-left: 3px solid var(--amber);
+}
+
+.toast.warning .toast-icon {
+  color: var(--amber);
+}
+
+.toast.info {
+  border-left: 3px solid var(--primary);
+}
+
+.toast.info .toast-icon {
+  color: var(--primary);
+}
+
 /* ─── APP GRID ───────────────────────────────────────────────────────────── */
 .app {
   display:grid;
@@ -320,6 +504,7 @@ body {
   height:100vh; 
   height:100dvh; 
   width:100vw;
+  transition: margin-top var(--dur-med) var(--ease-out);
 }
 
 /* ─── HEADER ─────────────────────────────────────────────────────────────── */
@@ -360,7 +545,13 @@ header {
   letter-spacing:.05em;
   white-space:nowrap; 
   flex-shrink:0;
-  transition:background var(--dur-fast),border-color var(--dur-fast),color var(--dur-fast);
+  transition:background var(--dur-fast),border-color var(--dur-fast),color var(--dur-fast),transform var(--dur-fast);
+  cursor: default;
+  user-select: none;
+}
+
+.pill:active {
+  transform: scale(0.96);
 }
 
 .pill .dot { 
@@ -379,7 +570,6 @@ header {
 .p-live { background:var(--green-l);   color:var(--green);   border-color:var(--green-m); }
 .p-live .dot { background:var(--green); }
 .p-info { background:var(--primary-l); color:var(--primary); border-color:var(--primary-m); }
-.p-info .dot { background:var(--primary); }
 .p-warn { background:var(--amber-l);   color:var(--amber);   border-color:var(--amber-m); }
 .p-warn .dot { background:var(--amber); }
 .p-crit { background:var(--red-l);     color:var(--red);     border-color:var(--red-m); }
@@ -398,12 +588,13 @@ header {
   letter-spacing:.07em;
   border:1.5px solid var(--border-md); 
   background:var(--surface2);
-  transition:background var(--dur-fast),border-color var(--dur-fast),color var(--dur-fast),box-shadow var(--dur-fast);
+  transition:background var(--dur-fast),border-color var(--dur-fast),color var(--dur-fast),box-shadow var(--dur-fast),transform var(--dur-fast);
   white-space:nowrap; 
   cursor:default;
+  user-select: none;
 }
 
-.threat-chip:hover { box-shadow:var(--shadow-xs); }
+.threat-chip:hover { box-shadow:var(--shadow-xs); transform: scale(1.02); }
 .threat-chip .tc-dot { width:7px; height:7px; border-radius:50%; background:var(--text3); transition:background var(--dur-med); flex-shrink:0; }
 
 .clock { text-align:right; }
@@ -438,8 +629,12 @@ header {
   box-shadow:var(--shadow-sm); 
   overflow:hidden; 
   contain:layout style paint;
-  /* Prevent card from breaking in print */
   break-inside: avoid;
+  transition: box-shadow var(--dur-fast), transform var(--dur-fast);
+}
+
+.card:hover {
+  box-shadow: var(--shadow);
 }
 
 .card-hdr { 
@@ -476,11 +671,11 @@ header {
   font-family:var(--fp); 
   outline:none;
   transition:background var(--dur-fast),color var(--dur-fast),
-             border-color var(--dur-fast),transform var(--dur-fast);
+             border-color var(--dur-fast),transform var(--dur-fast),box-shadow var(--dur-fast);
 }
 
 .icon-btn:hover,.icon-btn:focus-visible { background:var(--primary-l); color:var(--primary); border-color:var(--primary-m); }
-.icon-btn:active { transform:scale(.9); }
+.icon-btn:active { transform:scale(.85) rotate(180deg); }
 .icon-btn:focus-visible { box-shadow:0 0 0 2px var(--primary-l),0 0 0 3.5px var(--primary); }
 
 .card-body { padding:10px 13px; }
@@ -516,11 +711,12 @@ header {
   border-radius:9px; 
   cursor:pointer; 
   outline:none;
-  transition:background var(--dur-fast);
+  transition:background var(--dur-fast),transform var(--dur-fast);
 }
 
-.cr:hover,.cr:focus-visible { background:var(--surface2); }
+.cr:hover,.cr:focus-visible { background:var(--surface2); transform: translateX(2px); }
 .cr:focus-visible { box-shadow:inset 0 0 0 1.5px var(--primary-m); }
+.cr:active { transform: scale(0.98) translateX(2px); }
 
 .cr-icon { 
   width:30px; 
@@ -553,17 +749,18 @@ header {
   border-radius:9px;
   background:var(--surface2); 
   border:1px solid var(--border);
-  transition:background var(--dur-fast),box-shadow var(--dur-fast);
+  transition:background var(--dur-fast),box-shadow var(--dur-fast),transform var(--dur-fast);
+  cursor: default;
 }
 
-.stat-cell:hover { background:var(--primary-l); box-shadow:var(--shadow-xs); }
+.stat-cell:hover { background:var(--primary-l); box-shadow:var(--shadow-xs); transform: translateY(-1px); }
 .stat-cell:focus-visible { box-shadow:inset 0 0 0 1.5px var(--primary-m); }
 .stat-v { display:block; font-size:16px; font-weight:800; line-height:1.2; font-variant-numeric:tabular-nums; }
 .stat-l { display:block; font-size:7.5px; font-weight:600; letter-spacing:.10em; text-transform:uppercase; color:var(--text3); margin-top:2px; }
 
 /* ─── GEOPOLITICAL CONFLICT LIST ─────────────────────────────────────────── */
-.geo-ev { display:flex; align-items:center; gap:8px; padding:5px 9px; border-radius:8px; font-size:9px; color:var(--text2); transition:background var(--dur-fast); }
-.geo-ev:hover { background:var(--surface2); }
+.geo-ev { display:flex; align-items:center; gap:8px; padding:5px 9px; border-radius:8px; font-size:9px; color:var(--text2); transition:background var(--dur-fast),transform var(--dur-fast); }
+.geo-ev:hover { background:var(--surface2); transform: translateX(2px); }
 .geo-sev-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
 .geo-ev-name { flex:1; font-weight:600; font-size:9.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .geo-ev-type { font-size:8px; color:var(--text3); white-space:nowrap; text-transform:capitalize; }
@@ -618,10 +815,10 @@ header {
   border-radius:8px; 
   cursor:pointer; 
   outline:none; 
-  transition:background var(--dur-fast); 
+  transition:background var(--dur-fast),transform var(--dur-fast); 
 }
 
-.wx:hover,.wx:focus-visible { background:var(--surface2); }
+.wx:hover,.wx:focus-visible { background:var(--surface2); transform: translateX(2px); }
 .wx:focus-visible { box-shadow:inset 0 0 0 1.5px var(--primary-m); }
 .wx-ic   { font-size:15px; width:20px; text-align:center; flex-shrink:0; }
 .wx-city { font-size:10px; font-weight:600; flex:1; color:var(--text); }
@@ -639,10 +836,10 @@ header {
   border-radius:9px; 
   cursor:pointer; 
   outline:none; 
-  transition:background var(--dur-fast); 
+  transition:background var(--dur-fast),transform var(--dur-fast); 
 }
 
-.ev:hover,.ev:focus-visible { background:var(--surface2); }
+.ev:hover,.ev:focus-visible { background:var(--surface2); transform: translateX(2px); }
 .ev:focus-visible { box-shadow:inset 0 0 0 1.5px var(--primary-m); }
 .ev-badge { min-width:32px; height:22px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:800; flex-shrink:0; margin-top:1px; }
 .ev-body  { flex:1; min-width:0; }
@@ -663,13 +860,14 @@ header {
   background:transparent; 
   border:none; 
   outline:none;
-  transition:background var(--dur-fast),color var(--dur-fast); 
+  transition:background var(--dur-fast),color var(--dur-fast),transform var(--dur-fast); 
   font-family:var(--fp);
 }
 
 .ntab.on { background:var(--primary); color:#fff; }
 .ntab:hover:not(.on),.ntab:focus-visible:not(.on) { background:var(--primary-l); color:var(--primary); }
 .ntab:focus-visible { box-shadow:0 0 0 2px var(--primary-m); }
+.ntab:active { transform: scale(0.95); }
 
 .news-list { display:flex; flex-direction:column; }
 
@@ -678,11 +876,11 @@ header {
   border-bottom:1px solid var(--border);
   cursor:pointer; 
   outline:none; 
-  transition:background var(--dur-fast);
+  transition:background var(--dur-fast),transform var(--dur-fast);
 }
 
 .ni:last-child { border-bottom:none; }
-.ni:hover,.ni:focus-visible { background:var(--surface2); }
+.ni:hover,.ni:focus-visible { background:var(--surface2); transform: translateX(2px); }
 .ni:focus-visible { box-shadow:inset 0 0 0 1.5px var(--primary-m); }
 .ni-src { font-size:8px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin-bottom:3px; display:flex; align-items:center; gap:4px; }
 .ni-title-row { display:flex; align-items:flex-start; gap:6px; }
@@ -791,12 +989,13 @@ header {
 .map-btn.on { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:var(--shadow-sm),0 0 0 3px rgba(37,99,235,.15); }
 .map-btn.on .mb-dot { background:rgba(255,255,255,.7); }
 .map-btn:hover:not(.on),.map-btn:focus-visible:not(.on) { border-color:var(--primary-m); color:var(--primary); background:var(--primary-l); }
-.map-btn:active { transform:scale(.96); }
+.map-btn:active { transform:scale(.94); }
 .map-btn:focus-visible { box-shadow:var(--shadow-sm),0 0 0 2px var(--primary-l),0 0 0 3.5px var(--primary); }
 
 /* Map stats */
 .map-stats { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); z-index:800; display:flex; gap:3px; pointer-events:none; }
-.ms { padding:5px 16px; background:var(--surface); border:1px solid var(--border-md); border-radius:9px; text-align:center; box-shadow:var(--shadow-sm); }
+.ms { padding:5px 16px; background:var(--surface); border:1px solid var(--border-md); border-radius:9px; text-align:center; box-shadow:var(--shadow-sm); transition: transform var(--dur-fast); }
+.ms:hover { transform: translateY(-1px); }
 .ms-val { display:block; font-size:15px; font-weight:800; color:var(--text); line-height:1.1; font-variant-numeric:tabular-nums; }
 .ms-lbl { font-size:7px; font-weight:600; letter-spacing:.12em; color:var(--text3); text-transform:uppercase; }
 
@@ -837,7 +1036,7 @@ header {
 .tkr-inner { display:inline-flex; align-items:center; white-space:nowrap; height:100%; animation:marquee 140s linear infinite; will-change:transform; }
 .tkr-inner:hover { animation-play-state:paused; }
 
-@keyframes marquee { 0%{transform:translateX(0)}100%{transform:translateX(-50%)} }
+@keyframes marquee { 0%{transform:translateX(0)}100%{transform:translateX(-50)} }
 
 .tkr-item { display:inline-flex; align-items:center; gap:8px; padding:0 22px; border-right:1px solid var(--border); font-size:10px; font-weight:500; color:var(--text2); font-variant-numeric:tabular-nums; }
 .tkr-item::before { content:'◆'; font-size:5px; color:var(--primary); opacity:.6; }
@@ -869,12 +1068,13 @@ header {
   color:var(--text3); 
   font-family:var(--fp); 
   outline:none;
-  transition:color var(--dur-fast); 
+  transition:color var(--dur-fast),transform var(--dur-fast); 
   -webkit-tap-highlight-color:transparent;
 }
 
 .mnb:focus-visible { color:var(--primary); box-shadow:inset 0 0 0 1.5px var(--primary-m); border-radius:8px; }
 .mnb.on { color:var(--primary); }
+.mnb:active { transform: scale(0.92); }
 .mnb-ico { font-size:18px; line-height:1; }
 .mnb-lbl { font-size:9px; font-weight:600; letter-spacing:.04em; }
 
@@ -940,8 +1140,8 @@ header {
 .dev-badge-row { display:flex; gap:5px; margin-top:5px; flex-wrap:wrap; }
 .dev-badge { font-size:7.5px; font-weight:600; padding:2px 7px; border-radius:6px; letter-spacing:.05em; }
 .dev-links { padding:12px 16px; display:flex; flex-direction:column; gap:2px; }
-.dev-link  { display:flex; align-items:center; gap:9px; padding:7px 9px; border-radius:9px; text-decoration:none; color:var(--text2); font-size:10px; font-weight:500; outline:none; transition:background var(--dur-fast),color var(--dur-fast); }
-.dev-link:hover,.dev-link:focus-visible { background:var(--primary-l); color:var(--primary); }
+.dev-link  { display:flex; align-items:center; gap:9px; padding:7px 9px; border-radius:9px; text-decoration:none; color:var(--text2); font-size:10px; font-weight:500; outline:none; transition:background var(--dur-fast),color var(--dur-fast),transform var(--dur-fast); }
+.dev-link:hover,.dev-link:focus-visible { background:var(--primary-l); color:var(--primary); transform: translateX(2px); }
 .dev-link:focus-visible { box-shadow:inset 0 0 0 1.5px var(--primary-m); }
 .dev-link-ico { width:26px; height:26px; border-radius:7px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; }
 .dev-link-url { font-size:8px; color:var(--text3); display:block; margin-top:1px; }
@@ -951,7 +1151,7 @@ header {
 #loader {
   position:fixed; 
   inset:0; 
-  z-index:9999; 
+  z-index:var(--z-loader); 
   background:var(--surface);
   display:flex; 
   flex-direction:column; 
@@ -1014,11 +1214,15 @@ header {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--dur-fast);
+  transition: background var(--dur-fast),transform var(--dur-fast);
 }
 
 .error-overlay button:hover {
   background: #1d4ed8;
+}
+
+.error-overlay button:active {
+  transform: scale(0.97);
 }
 
 /* ─── UTILITIES ──────────────────────────────────────────────────────────── */
@@ -1137,6 +1341,24 @@ header {
   .tkr-lbl { display:none; }
   .tkr-badge { padding:0 8px; }
   .tkr-item  { padding:0 14px; font-size:9.5px; }
+  
+  /* Mobile toast adjustments */
+  .toast-container {
+    bottom: calc(76px + var(--safe-b));
+    left: 16px;
+    right: 16px;
+    transform: none;
+  }
+  
+  .toast {
+    max-width: 100%;
+  }
+  
+  /* Mobile offline banner */
+  .offline-banner {
+    font-size: 10px;
+    padding: 6px 12px;
+  }
 }
 
 /* ─── VERY SMALL SCREENS (<374px) ────────────────────────────────────────── */
@@ -1161,6 +1383,15 @@ header {
 
 <!-- ─── SKIP LINK (Accessibility) ─────────────────────────────────────────── -->
 <a href="#map-wrap" class="skip-link">Skip to map</a>
+
+<!-- ═══ OFFLINE BANNER ═════════════════════════════════════════════════════ -->
+<div class="offline-banner" id="offlineBanner" role="alert" aria-live="assertive">
+  <span class="offline-icon">⚠</span>
+  <span class="offline-text">You're offline. Some features may be limited.</span>
+</div>
+
+<!-- ═══ TOAST CONTAINER ════════════════════════════════════════════════════ -->
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-label="Notifications"></div>
 
 <!-- ═══ LOADER ═════════════════════════════════════════════════════════════ -->
 <div id="loader" role="status" aria-live="polite" aria-label="Loading BACKSTAX">
@@ -1619,7 +1850,7 @@ header {
       <div><div style="font-weight:600">Portfolio</div><span class="dev-link-url">abhishekshah.vercel.app</span></div>
     </a>
   </div>
-  <div class="dev-footer">BACKSTAX v4.2 · Signal over noise · Built with ♥ by Abhishek Shah</div>
+  <div class="dev-footer">BACKSTAX v4.2.1 · Signal over noise · Built with ♥ by Abhishek Shah</div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
@@ -1638,8 +1869,13 @@ header {
 <script>
 'use strict';
 /* ═══════════════════════════════════════════════════════════════════════════
-   BACKSTAX v4.2 — BOOT ORCHESTRATOR (ENHANCED)
+   BACKSTAX v4.2.1 — BOOT ORCHESTRATOR (ENHANCED + FIXED)
    ═══════════════════════════════════════════════════════════════════════════
+   FIXES:
+   • Service Worker registration with existence check and graceful fallback
+   • Offline/online detection with visual status banner
+   • Toast notification system for errors and status messages
+   
    ENHANCEMENTS:
    • Defensive checks for all global objects
    • Error logging and graceful degradation
@@ -1647,7 +1883,6 @@ header {
    • Focus trap for modal dialogs
    • Keyboard navigation support
    • Performance monitoring (DevTools)
-   • Service Worker registration (PWA)
 ════════════════════════════════════════════════════════════════════════════ */
 
 (function() {
@@ -1657,16 +1892,19 @@ header {
   const CONFIG = {
     LOADER_MIN_DURATION: 1800,
     LOADER_FALLBACK_DURATION: 6000,
-    VERSION: '4.2.0',
-    DEBUG: location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    VERSION: '4.2.1',
+    DEBUG: location.hostname === 'localhost' || location.hostname === '127.0.0.1',
+    SW_PATH: '/sw.js',
+    SW_CHECK_TIMEOUT: 5000
   };
   
   // ─── FEATURE DETECTION ───────────────────────────────────────────────────
-  const FEATURES = {
+  const Features = {
+    serviceWorker: 'serviceWorker' in navigator,
+    fetch: 'fetch' in window,
     requestIdleCallback: 'requestIdleCallback' in window,
     IntersectionObserver: 'IntersectionObserver' in window,
-    ResizeObserver: 'ResizeObserver' in window,
-    serviceWorker: 'serviceWorker' in navigator
+    ResizeObserver: 'ResizeObserver' in window
   };
   
   // ─── BOOT STATE ──────────────────────────────────────────────────────────
@@ -1674,7 +1912,9 @@ header {
     mapReady: false,
     dataEngineReady: false,
     loaderDismissed: false,
-    startTime: Date.now()
+    startTime: Date.now(),
+    swRegistered: false,
+    isOnline: navigator.onLine
   };
   
   // ─── LOGGING UTILITY ─────────────────────────────────────────────────────
@@ -1686,9 +1926,225 @@ header {
   };
   
   // ─── DEFER EXECUTION UTILITY ─────────────────────────────────────────────
-  const defer = FEATURES.requestIdleCallback
+  const defer = Features.requestIdleCallback
     ? (fn) => requestIdleCallback(fn, { timeout: 100 })
     : (fn) => setTimeout(fn, 1);
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // TOAST NOTIFICATION SYSTEM
+  // ═══════════════════════════════════════════════════════════════════════
+  const Toast = {
+    container: null,
+    
+    init() {
+      this.container = document.getElementById('toastContainer');
+      if (!this.container) {
+        this.container = document.createElement('div');
+        this.container.id = 'toastContainer';
+        this.container.className = 'toast-container';
+        this.container.setAttribute('aria-live', 'polite');
+        this.container.setAttribute('aria-label', 'Notifications');
+        document.body.appendChild(this.container);
+      }
+    },
+    
+    show(message, type = 'info', duration = 4000) {
+      if (!this.container) this.init();
+      
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.setAttribute('role', 'alert');
+      
+      const icons = {
+        success: '✓',
+        error: '✕',
+        warning: '⚠',
+        info: 'ℹ'
+      };
+      
+      toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" aria-label="Dismiss notification">×</button>
+      `;
+      
+      const closeBtn = toast.querySelector('.toast-close');
+      closeBtn.addEventListener('click', () => this.dismiss(toast));
+      
+      this.container.appendChild(toast);
+      
+      // Auto-dismiss
+      if (duration > 0) {
+        setTimeout(() => this.dismiss(toast), duration);
+      }
+      
+      return toast;
+    },
+    
+    dismiss(toast) {
+      if (!toast || !toast.parentNode) return;
+      
+      toast.classList.add('exiting');
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 150);
+    },
+    
+    success(message, duration) { return this.show(message, 'success', duration); },
+    error(message, duration) { return this.show(message, 'error', duration); },
+    warning(message, duration) { return this.show(message, 'warning', duration); },
+    info(message, duration) { return this.show(message, 'info', duration); }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // OFFLINE/ONLINE DETECTION
+  // ═══════════════════════════════════════════════════════════════════════
+  const OfflineDetector = {
+    banner: null,
+    wasOffline: false,
+    
+    init() {
+      this.banner = document.getElementById('offlineBanner');
+      if (!this.banner) return;
+      
+      // Initial state
+      this.updateStatus(navigator.onLine);
+      
+      // Listen for changes
+      window.addEventListener('online', () => this.handleOnline());
+      window.addEventListener('offline', () => this.handleOffline());
+      
+      log.info('Offline detector initialized');
+    },
+    
+    updateStatus(isOnline) {
+      if (!this.banner) return;
+      
+      const textEl = this.banner.querySelector('.offline-text');
+      const iconEl = this.banner.querySelector('.offline-icon');
+      
+      if (isOnline) {
+        this.banner.classList.remove('visible');
+        if (this.wasOffline) {
+          // Briefly show "back online" message
+          this.banner.classList.add('online');
+          if (textEl) textEl.textContent = 'Back online! All features restored.';
+          if (iconEl) iconEl.textContent = '✓';
+          this.banner.classList.add('visible');
+          
+          setTimeout(() => {
+            this.banner.classList.remove('visible', 'online');
+            if (textEl) textEl.textContent = "You're offline. Some features may be limited.";
+            if (iconEl) iconEl.textContent = '⚠';
+          }, 2000);
+        }
+      } else {
+        this.banner.classList.remove('online');
+        if (textEl) textEl.textContent = "You're offline. Some features may be limited.";
+        if (iconEl) iconEl.textContent = '⚠';
+        this.banner.classList.add('visible');
+      }
+    },
+    
+    handleOnline() {
+      log.info('Connection restored');
+      bootState.isOnline = true;
+      this.updateStatus(true);
+      Toast.success('Connection restored');
+    },
+    
+    handleOffline() {
+      log.warn('Connection lost');
+      bootState.isOnline = false;
+      this.wasOffline = true;
+      this.updateStatus(false);
+      Toast.warning('You are offline. Some features may be limited.');
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // SERVICE WORKER REGISTRATION (FIXED)
+  // ═══════════════════════════════════════════════════════════════════════
+  const ServiceWorkerManager = {
+    /**
+     * Check if the service worker file exists before attempting registration.
+     * This prevents 404 errors from showing in the console.
+     */
+    async checkSWExists() {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), CONFIG.SW_CHECK_TIMEOUT);
+        
+        const response = await fetch(CONFIG.SW_PATH, {
+          method: 'HEAD',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        return response.ok;
+      } catch (error) {
+        log.info('Service worker file check failed:', error.message);
+        return false;
+      }
+    },
+    
+    /**
+     * Register the service worker with existence check and graceful fallback.
+     */
+    async register() {
+      // Skip if service workers aren't supported
+      if (!Features.serviceWorker) {
+        log.info('Service Workers not supported in this browser');
+        return false;
+      }
+      
+      // Skip if running from file:// protocol
+      if (location.protocol === 'file:') {
+        log.info('Service Workers not supported on file:// protocol');
+        return false;
+      }
+      
+      // Check if SW file exists first
+      const swExists = await this.checkSWExists();
+      
+      if (!swExists) {
+        log.info('Service worker file not found at ' + CONFIG.SW_PATH + ' — skipping registration');
+        log.info('To enable PWA features, ensure sw.js is deployed to your server root');
+        return false;
+      }
+      
+      // Proceed with registration
+      try {
+        const registration = await navigator.serviceWorker.register(CONFIG.SW_PATH, {
+          scope: '/'
+        });
+        
+        bootState.swRegistered = true;
+        log.info('Service Worker registered successfully:', registration.scope);
+        
+        // Handle updates
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // New version available
+                Toast.info('A new version is available. Refresh to update.', 6000);
+              }
+            });
+          }
+        });
+        
+        return true;
+      } catch (error) {
+        // Don't show error to user for SW failures — it's not critical
+        log.warn('Service Worker registration failed:', error.message);
+        return false;
+      }
+    }
+  };
 
   // ─── LOADER MANAGEMENT ───────────────────────────────────────────────────
   function dismissLoader() {
@@ -1732,6 +2188,9 @@ header {
       status.textContent = `Error: ${error.message || 'Failed to initialize'}`;
       status.style.color = 'var(--red)';
     }
+    
+    // Show toast notification
+    Toast.error(`Initialization error: ${error.message || 'Unknown error'}`);
     
     // Still dismiss loader after delay
     setTimeout(dismissLoader, 2000);
@@ -1783,8 +2242,16 @@ header {
       const btn = document.getElementById(id);
       if (btn) {
         btn.addEventListener('click', () => {
+          // Visual feedback
           btn.style.transform = 'rotate(360deg)';
           setTimeout(() => btn.style.transform = '', 300);
+          
+          // Check if online
+          if (!bootState.isOnline) {
+            Toast.warning('Cannot refresh while offline');
+            return;
+          }
+          
           handler();
         });
       }
@@ -1908,22 +2375,6 @@ header {
     log.info('ARIA sync setup complete');
   }
   
-  // ─── SERVICE WORKER REGISTRATION ─────────────────────────────────────────
-  function registerServiceWorker() {
-    if (!FEATURES.serviceWorker) {
-      log.info('Service Worker not supported');
-      return;
-    }
-    
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        log.info('Service Worker registered:', registration.scope);
-      })
-      .catch((error) => {
-        log.warn('Service Worker registration failed:', error);
-      });
-  }
-  
   // ─── PERFORMANCE MARKERS ─────────────────────────────────────────────────
   function setupPerformanceMonitoring() {
     if (!CONFIG.DEBUG) return;
@@ -1952,37 +2403,78 @@ header {
     });
   }
   
+  // ─── GLOBAL ERROR HANDLER ────────────────────────────────────────────────
+  function setupGlobalErrorHandler() {
+    window.addEventListener('error', (event) => {
+      // Ignore extension errors
+      if (event.message?.includes('runtime.lastError')) {
+        return;
+      }
+      
+      log.error('Global error:', event.message);
+    });
+    
+    window.addEventListener('unhandledrejection', (event) => {
+      log.error('Unhandled promise rejection:', event.reason);
+    });
+  }
+  
+  // ─── EXPOSE UTILITIES TO WINDOW ──────────────────────────────────────────
+  function exposeGlobals() {
+    window.BACKSTAX = {
+      version: CONFIG.VERSION,
+      toast: Toast,
+      features: Features,
+      bootState: bootState,
+      log: log
+    };
+    
+    log.info('Globals exposed to window.BACKSTAX');
+  }
+  
   // ─── MAIN BOOT SEQUENCE ──────────────────────────────────────────────────
-  function boot() {
+  async function boot() {
     log.info(`BACKSTAX v${CONFIG.VERSION} booting...`);
-    log.info('Features:', FEATURES);
+    log.info('Features:', Features);
     
     try {
-      // 1. Initialize map (synchronous)
+      // 0. Setup global error handler first
+      setupGlobalErrorHandler();
+      
+      // 1. Initialize Toast system
+      Toast.init();
+      
+      // 2. Initialize offline detector
+      OfflineDetector.init();
+      
+      // 3. Initialize map (synchronous)
       initMap();
       
-      // 2. Initialize data engine
+      // 4. Initialize data engine
       initDataEngine();
       
-      // 3. Setup loader fallback
+      // 5. Setup loader fallback
       setupLoaderFallback();
       
-      // 4. Setup event delegation (replaces inline onclick)
+      // 6. Setup event delegation (replaces inline onclick)
       setupEventDelegation();
       
-      // 5. Setup dev card
+      // 7. Setup dev card
       setupDevCard();
       
-      // 6. Setup ARIA sync
+      // 8. Setup ARIA sync
       setupAriaSync();
       
-      // 7. Register service worker (deferred)
-      defer(registerServiceWorker);
+      // 9. Register service worker (deferred, with existence check)
+      defer(() => ServiceWorkerManager.register());
       
-      // 8. Setup performance monitoring
+      // 10. Setup performance monitoring
       setupPerformanceMonitoring();
       
-      // 9. Listen for loader signal from DataEngine
+      // 11. Expose utilities to window
+      exposeGlobals();
+      
+      // 12. Listen for loader signal from DataEngine
       window.addEventListener('bx:loader', dismissLoader);
       
       log.info('Boot sequence complete');
